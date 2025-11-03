@@ -5,7 +5,8 @@ import Image from 'next/image';
 import { useLayerManager, TextLayer } from '@/context/useLayerManager';
 import { Button } from '@/components/ui/button';
 import { UploadIcon, DownloadIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
-import { removeBackground } from "@imgly/background-removal";
+import { removeBackground, Config } from "@imgly/background-removal";
+import { getFontFamily } from "@/lib/fontLoader";
 
 export const PreviewSection = () => {
   const { layers, handleAttributeChange, setLayers } = useLayerManager();
@@ -13,10 +14,12 @@ export const PreviewSection = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [subjectImageUrl, setSubjectImageUrl] = useState<string | null>(null);
+  const [processingProgress, setProcessingProgress] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef<string | null>(null);
+  const imageCache = useRef<Map<string, string>>(new Map());
 
   const handleUploadImage = () => {
     if (fileInputRef.current) {
@@ -30,17 +33,96 @@ export const PreviewSection = () => {
         setError(null);
         setIsLoading(true);
         setSubjectImageUrl(null);
+        setProcessingProgress(0);
         const imageUrl = URL.createObjectURL(file);
         setSelectedImage(imageUrl);
-        await setupImage(imageUrl);
+        await setupImage(imageUrl, file);
     }
   };
 
-  const setupImage = async (imageUrl: string) => {
+  // Optimize image before processing if it's too large
+  const optimizeImage = async (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = document.createElement('img');
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      img.onload = () => {
+        const MAX_WIDTH = 1920;
+        const MAX_HEIGHT = 1080;
+        let width = img.width;
+        let height = img.height;
+
+        // Only resize if image is larger than max dimensions
+        if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+          const ratio = Math.min(MAX_WIDTH / width, MAX_HEIGHT / height);
+          width = width * ratio;
+          height = height * ratio;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Failed to optimize image'));
+          }
+        }, 'image/jpeg', 0.9);
+      };
+
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const setupImage = async (imageUrl: string, file: File) => {
     try {
-        const imageBlob = await removeBackground(imageUrl);
+        // Check cache first
+        const cacheKey = `${file.name}-${file.size}`;
+        if (imageCache.current.has(cacheKey)) {
+            const cachedUrl = imageCache.current.get(cacheKey)!;
+            setSubjectImageUrl(cachedUrl);
+            setIsLoading(false);
+            return;
+        }
+
+        // Optimize image if needed
+        setProcessingProgress(10);
+        const optimizedBlob = await optimizeImage(file);
+        const optimizedUrl = URL.createObjectURL(optimizedBlob);
+        
+        setProcessingProgress(20);
+
+        // Configure background removal for better performance
+        const config: Config = {
+            progress: (key, current, total) => {
+                // Update progress bar (20% to 90%)
+                const percentage = 20 + Math.round((current / total) * 70);
+                setProcessingProgress(percentage);
+            },
+            model: 'isnet_fp16', // Use fp16 model for better speed while maintaining quality
+            output: {
+                format: 'image/png',
+                quality: 0.8,
+            }
+        };
+
+        const imageBlob = await removeBackground(optimizedUrl, config);
+        setProcessingProgress(95);
+        
         const url = URL.createObjectURL(imageBlob);
         setSubjectImageUrl(url);
+        
+        // Cache the result
+        imageCache.current.set(cacheKey, url);
+        
+        setProcessingProgress(100);
+        
+        // Clean up optimized URL
+        URL.revokeObjectURL(optimizedUrl);
     } catch (err) {
         console.error(err);
         setError("Sorry, we couldn't remove the background from this image.");
@@ -149,7 +231,7 @@ export const PreviewSection = () => {
                     ctx.save();
                     
                     const scaledFontSize = textSet.fontSize * fontScale;
-                    ctx.font = `${textSet.fontWeight} ${scaledFontSize}px ${textSet.fontFamily}`;
+                    ctx.font = `${textSet.fontWeight} ${scaledFontSize}px ${getFontFamily(textSet.fontFamily)}`;
                     ctx.fillStyle = textSet.color;
                     ctx.globalAlpha = textSet.opacity;
                     ctx.textAlign = 'center';
@@ -273,10 +355,16 @@ export const PreviewSection = () => {
                     style={{ touchAction: 'none', backgroundImage: `url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' stroke='%23e2e8f0' stroke-width='4' stroke-dasharray='6%2c 14' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e")` }}
                 >
                     {isLoading ? (
-                        <div className='flex flex-col items-center gap-4 p-8 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-lg'>
+                        <div className='flex flex-col items-center gap-4 p-8 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-lg min-w-[320px]'>
                             <div className="w-16 h-16 border-4 border-blue-600 border-dashed rounded-full animate-spin"></div>
                             <span className="text-slate-700 dark:text-slate-300 font-medium text-lg">Processing image...</span>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">This may take a moment.</p>
+                            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mt-2">
+                                <div 
+                                    className="bg-gradient-to-r from-blue-600 to-purple-600 h-2.5 rounded-full transition-all duration-300 ease-out"
+                                    style={{ width: `${processingProgress}%` }}
+                                ></div>
+                            </div>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{processingProgress}% complete</p>
                         </div>
                     ) : error ? (
                         <div className="flex flex-col items-center gap-4 text-center text-red-500 bg-red-500/10 p-8 rounded-2xl border border-red-500/20">
@@ -327,7 +415,7 @@ export const PreviewSection = () => {
                                                     top: `${50 - textSet.top}%`,
                                                     left: `${textSet.left + 50}%`,
                                                     transform: `
-                                                        translate(-50%, -50%) 
+                                                        translate(-50%, -50%)
                                                         rotate(${textSet.rotation}deg)
                                                         perspective(1000px)
                                                         rotateX(${textSet.tiltX}deg)
@@ -337,7 +425,7 @@ export const PreviewSection = () => {
                                                     textAlign: 'center',
                                                     fontSize: `${textSet.fontSize}px`,
                                                     fontWeight: textSet.fontWeight,
-                                                    fontFamily: `${textSet.fontFamily}, sans-serif`,
+                                                    fontFamily: getFontFamily(textSet.fontFamily),
                                                     opacity: textSet.opacity,
                                                     letterSpacing: `${textSet.letterSpacing}px`,
                                                     transformStyle: 'preserve-3d',

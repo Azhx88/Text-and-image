@@ -8,8 +8,9 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, Command
 import { CaretSortIcon, CheckIcon, LockClosedIcon } from '@radix-ui/react-icons';
 import { cn } from '@/lib/utils';
 import { availableFonts, FREE_FONTS } from '@/constants/fonts';
+import { loadGoogleFont, getFontFamily, isFontLoaded } from '@/lib/fontLoader';
 
-interface FontFamilyPickerProps { 
+interface FontFamilyPickerProps {
   attribute: string;
   currentFont: string;
   handleAttributeChange: (attribute: string, value: string) => void;
@@ -23,6 +24,39 @@ const FontFamilyPicker: React.FC<FontFamilyPickerProps> = ({
   userId
 }) => {
   const [isPaidUser, setIsPaidUser] = useState(true);
+  const [loadingFonts, setLoadingFonts] = useState<Set<string>>(new Set());
+
+  const handleFontSelect = async (fontName: string) => {
+    if (!isPaidUser && !FREE_FONTS.includes(fontName)) {
+      return;
+    }
+
+    // Load the font if not already loaded (fallback for any missed fonts)
+    if (!isFontLoaded(fontName)) {
+      setLoadingFonts(prev => new Set(prev).add(fontName));
+      try {
+        await loadGoogleFont(fontName);
+      } catch (error) {
+        console.warn(`Failed to load font ${fontName}`);
+      } finally {
+        setLoadingFonts(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(fontName);
+          return newSet;
+        });
+      }
+    }
+
+    handleAttributeChange(attribute, fontName);
+  };
+
+  const getPreviewStyle = (fontName: string) => {
+    const isLoading = loadingFonts.has(fontName);
+    return {
+      fontFamily: getFontFamily(fontName),
+      opacity: isLoading ? 0.6 : 1,
+    };
+  };
 
   return (
     <Popover>
@@ -37,6 +71,7 @@ const FontFamilyPicker: React.FC<FontFamilyPickerProps> = ({
               "w-[200px] justify-between mt-3 p-2",
               !currentFont && "text-muted-foreground"
             )}
+            style={currentFont ? { fontFamily: getFontFamily(currentFont) } : {}}
           >
             {currentFont ? currentFont : "Select font family"}
             <CaretSortIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -57,11 +92,12 @@ const FontFamilyPicker: React.FC<FontFamilyPickerProps> = ({
                   <CommandItem
                     value={font.name}
                     key={font.name}
-                    onSelect={() => handleAttributeChange(attribute, font.name)}
+                    onSelect={() => handleFontSelect(font.name)}
                     className='hover:cursor-pointer'
-                    style={{ fontFamily: font.family }}
+                    style={getPreviewStyle(font.name)}
                   >
                     {font.label}
+                    {loadingFonts.has(font.name) && <span className="ml-2 text-xs text-muted-foreground">Loading...</span>}
                     <CheckIcon
                       className={cn(
                         "ml-auto h-4 w-4",
@@ -77,14 +113,15 @@ const FontFamilyPicker: React.FC<FontFamilyPickerProps> = ({
                 <CommandItem
                   value={font.name}
                   key={font.name}
-                  onSelect={() => isPaidUser && handleAttributeChange(attribute, font.name)}
+                  onSelect={() => handleFontSelect(font.name)}
                   className={cn(
                     'hover:cursor-pointer',
                     !isPaidUser && 'opacity-50 hover:cursor-not-allowed'
                   )}
-                  style={{ fontFamily: font.family }}
+                  style={getPreviewStyle(font.name)}
                 >
                   {font.label}
+                  {loadingFonts.has(font.name) && <span className="ml-2 text-xs text-muted-foreground">Loading...</span>}
                   {!isPaidUser && <LockClosedIcon className="ml-auto h-4 w-4" />}
                   {isPaidUser && (
                     <CheckIcon
