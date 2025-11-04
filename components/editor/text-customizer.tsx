@@ -150,7 +150,7 @@ const TextCustomizer: React.FC<TextCustomizerProps> = ({
 
           {/* ---------- Transform Tab ---------- */}
           <TabsContent value="transform" className="space-y-4 pt-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="flex justify-center">
               <div className="flex flex-col items-center">
                 <div className="flex items-center gap-2 mb-2">
                   <Button
@@ -186,31 +186,6 @@ const TextCustomizer: React.FC<TextCustomizerProps> = ({
                   top={textSet.top}
                   isGridEnabled={isGridEnabled}
                   gridSize={gridSize}
-                />
-              </div>
-              <div className="space-y-4">
-                <SliderField
-                  attribute="left"
-                  label="X Position"
-                  min={-200}
-                  max={200}
-                  step={1}
-                  currentValue={textSet.left}
-                  hasTopPadding={false}
-                  handleAttributeChange={(attribute, value) =>
-                    handleAttributeChange(textSet.id, attribute, value)
-                  }
-                />
-                <SliderField
-                  attribute="top"
-                  label="Y Position"
-                  min={-100}
-                  max={100}
-                  step={1}
-                  currentValue={textSet.top}
-                  handleAttributeChange={(attribute, value) =>
-                    handleAttributeChange(textSet.id, attribute, value)
-                  }
                 />
               </div>
             </div>
@@ -251,7 +226,7 @@ const TextCustomizer: React.FC<TextCustomizerProps> = ({
               attribute="letterSpacing"
               label="Text Spacing"
               min={-5}
-              max={20}
+              max={30}
               step={0.5}
               currentValue={textSet.letterSpacing}
               handleAttributeChange={(attribute, value) =>
@@ -276,6 +251,17 @@ const TextCustomizer: React.FC<TextCustomizerProps> = ({
               max={1}
               step={0.01}
               currentValue={textSet.opacity}
+              handleAttributeChange={(attribute, value) =>
+                handleAttributeChange(textSet.id, attribute, value)
+              }
+            />
+            <SliderField
+              attribute="shadowSize"
+              label="Shadow Depth"
+              min={0}
+              max={20}
+              step={1}
+              currentValue={textSet.shadowSize}
               handleAttributeChange={(attribute, value) =>
                 handleAttributeChange(textSet.id, attribute, value)
               }

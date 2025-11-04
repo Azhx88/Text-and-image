@@ -229,7 +229,7 @@ export const PreviewSection = () => {
                 } else if (layer.type === 'text') {
                     const textSet = layer as TextLayer;
                     ctx.save();
-                    
+
                     const scaledFontSize = textSet.fontSize * fontScale;
                     ctx.font = `${textSet.fontWeight} ${scaledFontSize}px ${getFontFamily(textSet.fontFamily)}`;
                     ctx.fillStyle = textSet.color;
@@ -237,6 +237,14 @@ export const PreviewSection = () => {
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.letterSpacing = `${textSet.letterSpacing}px`;
+
+                    // Apply shadow if shadowSize > 0
+                    if (textSet.shadowSize > 0) {
+                        ctx.shadowColor = textSet.shadowColor;
+                        ctx.shadowBlur = textSet.shadowSize * 2;
+                        ctx.shadowOffsetX = 0;
+                        ctx.shadowOffsetY = textSet.shadowSize;
+                    }
 
                     const x = canvas.width * (textSet.left + 50) / 100;
                     const y = canvas.height * (50 - textSet.top) / 100;
@@ -429,7 +437,7 @@ export const PreviewSection = () => {
                                                     opacity: textSet.opacity,
                                                     letterSpacing: `${textSet.letterSpacing}px`,
                                                     transformStyle: 'preserve-3d',
-                                                    textShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                                                    textShadow: textSet.shadowSize > 0 ? `0 ${textSet.shadowSize}px ${textSet.shadowSize * 2}px ${textSet.shadowColor}` : 'none',
                                                     cursor: draggingRef.current === textSet.id ? 'grabbing' : 'grab',
                                                     transition: 'all 0.2s ease-out'
                                                 }}

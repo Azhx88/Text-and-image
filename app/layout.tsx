@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Roboto, Poppins } from 'next/font/google'
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { LayerManagerProvider } from "@/context/useLayerManager";
 import FontPreloader from "@/components/FontPreloader";
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' })
@@ -24,11 +25,11 @@ export default function RootLayout({
         <FontPreloader />
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
+          defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <LayerManagerProvider>{children}</LayerManagerProvider>
         </ThemeProvider>
       </body>
     </html>
