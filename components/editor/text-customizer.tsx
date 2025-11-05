@@ -60,6 +60,11 @@ const TextCustomizer: React.FC<TextCustomizerProps> = ({
       handleAttributeChange(textSet.id, 'top', topOffset);
     };
 
+    const handleZoom = (delta: number) => {
+      const newSize = Math.max(10, Math.min(800, textSet.fontSize + delta));
+      handleAttributeChange(textSet.id, 'fontSize', newSize);
+    };
+
     const handleNudge = (direction: 'up' | 'down' | 'left' | 'right') => {
       const step = 2; // percentage points matching left/top units
       let newLeft = textSet.left;
@@ -180,6 +185,7 @@ const TextCustomizer: React.FC<TextCustomizerProps> = ({
                 <Touchpad
                   id={Number(textSet.id.split('-')[2])}
                   onChangePosition={handleTouchpadChange}
+                  onZoom={handleZoom}
                   onNudge={handleNudge}
                   onReset={handleReset}
                   left={textSet.left}

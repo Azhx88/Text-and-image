@@ -2,11 +2,12 @@
 
 import React, { useRef, useState } from 'react';
 import { Button } from '../ui/button';
+import { usePinchToZoom } from '@/hooks/use-pinch-to-zoom';
 
 interface TouchpadProps {
     id: number;
-    // called continuously during pointer moves with left/top offsets (same units as sliders: -50..50)
     onChangePosition: (left: number, top: number) => void;
+    onZoom: (delta: number) => void;
     left: number;
     top: number;
     onNudge: (direction: 'up' | 'down' | 'left' | 'right') => void;
@@ -15,8 +16,9 @@ interface TouchpadProps {
     gridSize?: number;
 }
 
-const Touchpad: React.FC<TouchpadProps> = ({ id, onChangePosition, left, top, onNudge, onReset, isGridEnabled = false, gridSize = 20 }) => {
+const Touchpad: React.FC<TouchpadProps> = ({ id, onChangePosition, onZoom, left, top, onNudge, onReset, isGridEnabled = false, gridSize = 20 }) => {
     const ref = useRef<HTMLDivElement | null>(null);
+    usePinchToZoom({ containerRef: ref, onZoom });
     const draggingRef = useRef(false);
     const activePointerRef = useRef<number | null>(null);
     const [knobPos, setKnobPos] = useState({ xPct: left + 50, yPct: 50 - top });

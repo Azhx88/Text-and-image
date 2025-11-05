@@ -1,12 +1,67 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useLayerManager, TextLayer } from '@/context/useLayerManager';
 import { Button } from '@/components/ui/button';
 import { UploadIcon, DownloadIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import { removeBackground, Config } from "@imgly/background-removal";
 import { getFontFamily } from "@/lib/fontLoader";
+import { useDragToMove } from '@/hooks/use-drag-to-move';
+import { usePinchToZoom } from '@/hooks/use-pinch-to-zoom';
+
+const TextLayerComponent = ({ textSet, handleAttributeChange, previewContainerRef }: { textSet: TextLayer, handleAttributeChange: (id: string, attribute: string, value: any) => void, previewContainerRef: React.RefObject<HTMLDivElement> }) => {
+  const textRef = useRef<HTMLDivElement>(null);
+
+  const handleDrag = useCallback((dx: number, dy: number) => {
+    if (!previewContainerRef.current) return;
+    const rect = previewContainerRef.current.getBoundingClientRect();
+    const newLeft = textSet.left + (dx / rect.width) * 100;
+    const newTop = textSet.top - (dy / rect.height) * 100;
+    handleAttributeChange(textSet.id, 'left', Math.max(Math.min(newLeft, 50), -50));
+    handleAttributeChange(textSet.id, 'top', Math.max(Math.min(newTop, 50), -50));
+  }, [textSet.left, textSet.top, handleAttributeChange, textSet.id, previewContainerRef]);
+
+  const handleZoom = useCallback((delta: number) => {
+    const newSize = Math.max(10, Math.min(800, textSet.fontSize + delta));
+    handleAttributeChange(textSet.id, 'fontSize', newSize);
+  }, [textSet.fontSize, handleAttributeChange, textSet.id]);
+
+  useDragToMove({ containerRef: textRef, onDrag: handleDrag });
+  usePinchToZoom({ containerRef: textRef, onZoom: handleZoom });
+
+  return (
+    <div
+      ref={textRef}
+      style={{
+        position: 'absolute',
+        top: `${50 - textSet.top}%`,
+        left: `${textSet.left + 50}%`,
+        transform: `
+            translate(-50%, -50%)
+            rotate(${textSet.rotation}deg)
+            perspective(1000px)
+            rotateX(${textSet.tiltX}deg)
+            rotateY(${textSet.tiltY}deg)
+        `,
+        color: textSet.color,
+        textAlign: 'center',
+        fontSize: `${textSet.fontSize}px`,
+        fontWeight: textSet.fontWeight,
+        fontFamily: getFontFamily(textSet.fontFamily),
+        opacity: textSet.opacity,
+        letterSpacing: `${textSet.letterSpacing}px`,
+        transformStyle: 'preserve-3d',
+        textShadow: textSet.shadowSize > 0 ? `0 ${textSet.shadowSize}px ${textSet.shadowSize * 2}px ${textSet.shadowColor}` : 'none',
+        cursor: 'grab',
+        transition: 'all 0.2s ease-out'
+      }}
+      className="hover:scale-105 active:scale-95"
+    >
+      {textSet.text}
+    </div>
+  );
+};
 
 export const PreviewSection = () => {
   const { layers, handleAttributeChange, setLayers } = useLayerManager();
@@ -18,7 +73,6 @@ export const PreviewSection = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
-  const draggingRef = useRef<string | null>(null);
   const imageCache = useRef<Map<string, string>>(new Map());
 
   const handleUploadImage = () => {
@@ -130,63 +184,6 @@ export const PreviewSection = () => {
         setIsLoading(false);
     }
   };
-
-  const onPointerDown = (e: React.MouseEvent | React.TouchEvent, id: string) => {
-    e.preventDefault();
-    draggingRef.current = id;
-    try {
-        document.body.style.userSelect = 'none';
-    } catch {}
-    window.addEventListener('mousemove', onPointerMove as any);
-    window.addEventListener('mouseup', onPointerUp as any);
-    window.addEventListener('touchmove', onPointerMove as any, { passive: false } as any);
-    window.addEventListener('touchend', onPointerUp as any);
-  };
-
-  const onPointerMove = (e: MouseEvent | TouchEvent) => {
-    if (draggingRef.current === null) return;
-    if (!previewContainerRef.current) return;
-    e.preventDefault();
-    const rect = previewContainerRef.current.getBoundingClientRect();
-    let clientX = 0;
-    let clientY = 0;
-    if ((e as TouchEvent).touches && (e as TouchEvent).touches.length) {
-        clientX = (e as TouchEvent).touches[0].clientX;
-        clientY = (e as TouchEvent).touches[0].clientY;
-    } else if ((e as MouseEvent).clientX !== undefined) {
-        clientX = (e as MouseEvent).clientX;
-        clientY = (e as MouseEvent).clientY;
-    }
-
-    const leftPct = ((clientX - rect.left) / rect.width) * 100 - 50;
-    const topPct = 50 - ((clientY - rect.top) / rect.height) * 100;
-
-    const clampedLeft = Math.max(Math.min(leftPct, 50), -50);
-    const clampedTop = Math.max(Math.min(topPct, 50), -50);
-
-    handleAttributeChange(draggingRef.current, 'left', clampedLeft);
-    handleAttributeChange(draggingRef.current, 'top', clampedTop);
-  };
-
-  const onPointerUp = () => {
-    draggingRef.current = null;
-    try {
-        document.body.style.userSelect = '';
-    } catch {}
-    window.removeEventListener('mousemove', onPointerMove as any);
-    window.removeEventListener('mouseup', onPointerUp as any);
-    window.removeEventListener('touchmove', onPointerMove as any);
-    window.removeEventListener('touchend', onPointerUp as any);
-  };
-
-  useEffect(() => {
-    return () => {
-        window.removeEventListener('mousemove', onPointerMove as any);
-        window.removeEventListener('mouseup', onPointerUp as any);
-        window.removeEventListener('touchmove', onPointerMove as any);
-        window.removeEventListener('touchend', onPointerUp as any);
-    };
-  }, []);
 
   const saveCompositeImage = () => {
     if (!canvasRef.current || isLoading || !previewContainerRef.current) return;
@@ -414,37 +411,12 @@ export const PreviewSection = () => {
                                     case 'text':
                                         const textSet = layer as TextLayer;
                                         return (
-                                            <div
+                                            <TextLayerComponent
                                                 key={textSet.id}
-                                                onMouseDown={(e) => onPointerDown(e, textSet.id)}
-                                                onTouchStart={(e) => onPointerDown(e, textSet.id)}
-                                                style={{
-                                                    position: 'absolute',
-                                                    top: `${50 - textSet.top}%`,
-                                                    left: `${textSet.left + 50}%`,
-                                                    transform: `
-                                                        translate(-50%, -50%)
-                                                        rotate(${textSet.rotation}deg)
-                                                        perspective(1000px)
-                                                        rotateX(${textSet.tiltX}deg)
-                                                        rotateY(${textSet.tiltY}deg)
-                                                    `,
-                                                    color: textSet.color,
-                                                    textAlign: 'center',
-                                                    fontSize: `${textSet.fontSize}px`,
-                                                    fontWeight: textSet.fontWeight,
-                                                    fontFamily: getFontFamily(textSet.fontFamily),
-                                                    opacity: textSet.opacity,
-                                                    letterSpacing: `${textSet.letterSpacing}px`,
-                                                    transformStyle: 'preserve-3d',
-                                                    textShadow: textSet.shadowSize > 0 ? `0 ${textSet.shadowSize}px ${textSet.shadowSize * 2}px ${textSet.shadowColor}` : 'none',
-                                                    cursor: draggingRef.current === textSet.id ? 'grabbing' : 'grab',
-                                                    transition: 'all 0.2s ease-out'
-                                                }}
-                                                className="hover:scale-105 active:scale-95"
-                                            >
-                                                {textSet.text}
-                                            </div>
+                                                textSet={textSet}
+                                                handleAttributeChange={handleAttributeChange}
+                                                previewContainerRef={previewContainerRef}
+                                            />
                                         );
                                     default:
                                         return null;
