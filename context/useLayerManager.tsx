@@ -64,6 +64,8 @@ interface LayerManagerContextType {
   setFilterIntensity: (intensity: number) => void;
   uploadedImageElement: HTMLImageElement | null;
   setUploadedImageElement: (img: HTMLImageElement | null) => void;
+  backgroundBlur: number;
+  setBackgroundBlur: (blur: number) => void;
 }
 
 // Create the context
@@ -117,6 +119,9 @@ export const LayerManagerProvider = ({ children }: { children: ReactNode }) => {
   const [applyToFullImage, setApplyToFullImage] = useState<boolean>(true);
   const [filterIntensity, setFilterIntensity] = useState<number>(100); // 0-100%
   const [uploadedImageElement, setUploadedImageElement] = useState<HTMLImageElement | null>(null);
+
+  // Background blur state (0-100, maps to f/4.0 - f/1.4)
+  const [backgroundBlur, setBackgroundBlur] = useState<number>(0);
 
   const addNewTextSet = () => {
     const newId = `text-layer-${Math.random().toString(36).substr(2, 9)}`;
@@ -302,7 +307,9 @@ export const LayerManagerProvider = ({ children }: { children: ReactNode }) => {
         filterIntensity,
         setFilterIntensity,
         uploadedImageElement,
-        setUploadedImageElement
+        setUploadedImageElement,
+        backgroundBlur,
+        setBackgroundBlur
       }}
     >
       {children}

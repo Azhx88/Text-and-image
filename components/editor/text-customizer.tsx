@@ -20,6 +20,9 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLayerManager } from "@/context/useLayerManager";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 interface TextCustomizerProps {
   textSet: {
@@ -59,8 +62,17 @@ const TextCustomizer: React.FC<TextCustomizerProps> = ({
   // Persistent tab state across layer switches
   const [activeTab, setActiveTab] = useState('transform');
 
-  // Get filter state from layer manager
-  const { selectedFilter, setSelectedFilter, applyToFullImage, setApplyToFullImage, filterIntensity, setFilterIntensity, uploadedImageElement } = useLayerManager();
+  // Get filter and blur state from layer manager
+  const { selectedFilter, setSelectedFilter, applyToFullImage, setApplyToFullImage, filterIntensity, setFilterIntensity, uploadedImageElement, backgroundBlur, setBackgroundBlur } = useLayerManager();
+
+  // Helper to calculate aperture from slider value (0-100)
+  const getApertureFromSlider = (value: number) => {
+    // 0 = f/4.0 (no blur), 100 = f/3.5 (max blur)
+    const minAperture = 3.5;
+    const maxAperture = 4.0;
+    const aperture = maxAperture - (value / 100) * (maxAperture - minAperture);
+    return aperture.toFixed(1);
+  };
 
   // Touchpad handler — receives left/top offsets (in -50..50) and updates attributes
   const handleTouchpadChange = (leftOffset: number, topOffset: number) => {
@@ -280,6 +292,29 @@ const TextCustomizer: React.FC<TextCustomizerProps> = ({
               handleAttributeChange={(attribute, value) =>
                 handleAttributeChange(textSet.id, attribute, value)
               }
+            />
+
+            {/* Background Blur Control - Exact Match to SliderField */}
+            <div className="flex items-center justify-between mt-6">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="blur-amount">Background Blur</Label>
+              </div>
+              <Input
+                type="text"
+                value={`f/${getApertureFromSlider(backgroundBlur)}`}
+                readOnly
+                className="w-16 rounded-md border border-transparent px-2 py-0.5 text-center text-sm text-muted-foreground hover:border-border hover:text-foreground cursor-default"
+              />
+            </div>
+            <Slider
+              id="blur-amount"
+              min={0}
+              max={100}
+              value={[backgroundBlur]}
+              step={1}
+              onValueChange={(value) => setBackgroundBlur(value[0])}
+              className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4 mt-2"
+              aria-label="Background Blur"
             />
             <div className="grid grid-cols-2 gap-4">
               <SliderField

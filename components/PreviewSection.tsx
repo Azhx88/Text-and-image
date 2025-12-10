@@ -65,7 +65,7 @@ const TextLayerComponent = ({ textSet, handleAttributeChange, previewContainerRe
 };
 
 export const PreviewSection = () => {
-    const { layers, handleAttributeChange, setLayers, selectedFilter, filterIntensity, setUploadedImageElement } = useLayerManager();
+    const { layers, handleAttributeChange, setLayers, selectedFilter, filterIntensity, setUploadedImageElement, backgroundBlur } = useLayerManager();
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -228,7 +228,16 @@ export const PreviewSection = () => {
             const renderLayerOnCanvas = (layer: any) => {
                 return new Promise<void>((resolve) => {
                     if (layer.type === 'full') {
+                        // Apply blur if active
+                        if (backgroundBlur > 0) {
+                            // Max blur radius 15px for f/3.5 equivalent
+                            const maxBlurRadius = 15;
+                            // Scale blur based on image width relative to a reference (e.g., 1000px)
+                            const blurRadius = (backgroundBlur / 100) * maxBlurRadius * (canvas.width / 1000);
+                            ctx.filter = `blur(${blurRadius}px)`;
+                        }
                         ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+                        ctx.filter = 'none'; // Reset filter
                         resolve();
                     } else if (layer.type === 'subject' && subjectImageUrl) {
                         const subjectImg = new (window as any).Image();
@@ -238,9 +247,13 @@ export const PreviewSection = () => {
                             resolve();
                         };
                         subjectImg.src = subjectImageUrl;
+                        subjectImg.src = subjectImageUrl;
                     } else if (layer.type === 'text') {
                         const textSet = layer as TextLayer;
                         ctx.save();
+
+                        // No dynamic blur for text - simplified logic
+
 
                         const scaledFontSize = textSet.fontSize * fontScale;
                         ctx.font = `${textSet.fontWeight} ${scaledFontSize}px ${getFontFamily(textSet.fontFamily)}`;
@@ -418,6 +431,11 @@ export const PreviewSection = () => {
                                                         objectPosition="center"
                                                         className="absolute inset-0 object-contain pointer-events-none"
                                                         draggable={false}
+                                                        style={{
+                                                            // Max blur radius 15px
+                                                            filter: backgroundBlur > 0 ? `blur(${(backgroundBlur / 100) * 15}px)` : 'none',
+                                                            transition: 'filter 0.1s ease-out'
+                                                        }}
                                                     />
                                                 );
                                             case 'subject':
