@@ -54,12 +54,16 @@ interface LayerManagerContextType {
   duplicateTextSet: (textSet: any) => void;
   removeTextSet: (id: string) => void;
   toggleVisibility: (id: string) => void;
+  moveLayerUp: (id: string) => void;
+  moveLayerDown: (id: string) => void;
   selectedFilter: string;
   setSelectedFilter: (filterName: string) => void;
   applyToFullImage: boolean;
   setApplyToFullImage: (apply: boolean) => void;
   filterIntensity: number;
   setFilterIntensity: (intensity: number) => void;
+  uploadedImageElement: HTMLImageElement | null;
+  setUploadedImageElement: (img: HTMLImageElement | null) => void;
 }
 
 // Create the context
@@ -112,6 +116,7 @@ export const LayerManagerProvider = ({ children }: { children: ReactNode }) => {
   const [selectedFilter, setSelectedFilter] = useState<string>('original');
   const [applyToFullImage, setApplyToFullImage] = useState<boolean>(true);
   const [filterIntensity, setFilterIntensity] = useState<number>(100); // 0-100%
+  const [uploadedImageElement, setUploadedImageElement] = useState<HTMLImageElement | null>(null);
 
   const addNewTextSet = () => {
     const newId = `text-layer-${Math.random().toString(36).substr(2, 9)}`;
@@ -123,7 +128,7 @@ export const LayerManagerProvider = ({ children }: { children: ReactNode }) => {
       // Create new text layer with the calculated order
       const newTextLayer: TextLayer = {
         id: newId,
-        name: 'New Text',
+        name: 'Edit',
         type: 'text',
         visible: true,
         order: newOrder,
@@ -196,13 +201,64 @@ export const LayerManagerProvider = ({ children }: { children: ReactNode }) => {
     setLayers(prev => prev.filter(set => set.id !== id));
   };
 
-  // ✅ Clean new visibility toggle
   const toggleVisibility = (id: string) => {
-    setLayers(prev =>
-      prev.map(layer =>
-        layer.id === id ? { ...layer, visible: !layer.visible } : layer
-      ) as Layer[]
-    );
+    setLayers(prev => prev.map(layer =>
+      layer.id === id ? { ...layer, visible: !layer.visible } : layer
+    ));
+  };
+
+  // Move layer up (increase order, move forward in z-index)
+  const moveLayerUp = (id: string) => {
+    setLayers(prev => {
+      const textLayers = prev.filter(l => l.type === 'text').sort((a, b) => a.order - b.order);
+      const currentIndex = textLayers.findIndex(l => l.id === id);
+
+      // Can't move up if already at top or not found
+      if (currentIndex === -1 || currentIndex === textLayers.length - 1) {
+        return prev;
+      }
+
+      // Get the two layers to swap
+      const currentLayer = textLayers[currentIndex];
+      const nextLayer = textLayers[currentIndex + 1];
+
+      // Swap their order values
+      return prev.map(layer => {
+        if (layer.id === currentLayer.id) {
+          return { ...layer, order: nextLayer.order };
+        } else if (layer.id === nextLayer.id) {
+          return { ...layer, order: currentLayer.order };
+        }
+        return layer;
+      });
+    });
+  };
+
+  // Move layer down (decrease order, move backward in z-index)
+  const moveLayerDown = (id: string) => {
+    setLayers(prev => {
+      const textLayers = prev.filter(l => l.type === 'text').sort((a, b) => a.order - b.order);
+      const currentIndex = textLayers.findIndex(l => l.id === id);
+
+      // Can't move down if already at bottom or not found
+      if (currentIndex === -1 || currentIndex === 0) {
+        return prev;
+      }
+
+      // Get the two layers to swap
+      const currentLayer = textLayers[currentIndex];
+      const prevLayer = textLayers[currentIndex - 1];
+
+      // Swap their order values
+      return prev.map(layer => {
+        if (layer.id === currentLayer.id) {
+          return { ...layer, order: prevLayer.order };
+        } else if (layer.id === prevLayer.id) {
+          return { ...layer, order: currentLayer.order };
+        }
+        return layer;
+      });
+    });
   };
 
   return (
@@ -219,12 +275,16 @@ export const LayerManagerProvider = ({ children }: { children: ReactNode }) => {
         duplicateTextSet,
         removeTextSet,
         toggleVisibility,
+        moveLayerUp,
+        moveLayerDown,
         selectedFilter,
         setSelectedFilter,
         applyToFullImage,
         setApplyToFullImage,
         filterIntensity,
-        setFilterIntensity
+        setFilterIntensity,
+        uploadedImageElement,
+        setUploadedImageElement
       }}
     >
       {children}

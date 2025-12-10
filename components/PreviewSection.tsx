@@ -65,7 +65,7 @@ const TextLayerComponent = ({ textSet, handleAttributeChange, previewContainerRe
 };
 
 export const PreviewSection = () => {
-    const { layers, handleAttributeChange, setLayers, selectedFilter, filterIntensity } = useLayerManager();
+    const { layers, handleAttributeChange, setLayers, selectedFilter, filterIntensity, setUploadedImageElement } = useLayerManager();
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
@@ -94,6 +94,20 @@ export const PreviewSection = () => {
             await setupImage(imageUrl, file);
         }
     };
+
+    // Create HTMLImageElement for filter previews
+    useEffect(() => {
+        if (selectedImage) {
+            const img = new (window as any).Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => {
+                setUploadedImageElement(img);
+            };
+            img.src = selectedImage;
+        } else {
+            setUploadedImageElement(null);
+        }
+    }, [selectedImage, setUploadedImageElement]);
 
     // Optimize image before processing if it's too large
     const optimizeImage = async (file: File): Promise<Blob> => {

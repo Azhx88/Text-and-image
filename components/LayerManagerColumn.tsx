@@ -9,7 +9,7 @@ import {
   ImageIcon,
   PersonIcon,
 } from '@radix-ui/react-icons';
-import { EyeIcon, EyeOffIcon } from "lucide-react";
+import { EyeIcon, EyeOffIcon, ChevronUp, ChevronDown } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -43,7 +43,7 @@ const LayerIcon = ({ type }: { type: Layer['type'] }) => {
   }
 };
 
-function SortableLayerItem({ layer }: { layer: Layer }) {
+function SortableLayerItem({ layer, isTopTextLayer, isBottomTextLayer }: { layer: Layer; isTopTextLayer: boolean; isBottomTextLayer: boolean }) {
   const {
     attributes,
     listeners,
@@ -53,13 +53,15 @@ function SortableLayerItem({ layer }: { layer: Layer }) {
     isDragging,
   } = useSortable({ id: layer.id });
 
-  const { activeLayer, setActiveLayer, toggleVisibility } = useLayerManager();
+  const { activeLayer, setActiveLayer, toggleVisibility, moveLayerUp, moveLayerDown } = useLayerManager();
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 10 : undefined,
   };
+
+  const isTextLayer = layer.type === 'text';
 
   return (
     <div
@@ -84,6 +86,34 @@ function SortableLayerItem({ layer }: { layer: Layer }) {
       <span className="flex-1 truncate font-medium text-sm ml-2">
         {layer.name || (layer.type === 'text' ? (layer as TextLayer).text : '') || "New Text"}
       </span>
+
+      {/* Up/Down arrows for text layers */}
+      {isTextLayer && (
+        <>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              moveLayerUp(layer.id);
+            }}
+            disabled={isTopTextLayer}
+            className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed mr-1"
+            title="Move Forward"
+          >
+            <ChevronUp className="w-4 h-4" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              moveLayerDown(layer.id);
+            }}
+            disabled={isBottomTextLayer}
+            className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed mr-1"
+            title="Move Backward"
+          >
+            <ChevronDown className="w-4 h-4" />
+          </button>
+        </>
+      )}
 
       {/* Eye button as before */}
       <div
@@ -150,9 +180,39 @@ export const LayerManagerColumn = () => {
             strategy={verticalListSortingStrategy}
           >
             <div>
-              {sortedLayers.map(layer => (
-                <SortableLayerItem key={layer.id} layer={layer} />
-              ))}
+              {sortedLayers.map((layer, index) => {
+                if (layer.type === 'text') {
+                  // Get all text layers to find max/min order values
+                  const allTextLayers = layers.filter(l => l.type === 'text');
+                  const maxOrder = Math.max(...allTextLayers.map(l => l.order));
+                  const minOrder = Math.min(...allTextLayers.map(l => l.order));
+
+                  // Disable UP if this layer has highest order (front-most)
+                  const isTopTextLayer = layer.order === maxOrder;
+
+                  // Disable DOWN if this layer has lowest order (back-most)
+                  const isBottomTextLayer = layer.order === minOrder;
+
+                  return (
+                    <SortableLayerItem
+                      key={layer.id}
+                      layer={layer}
+                      isTopTextLayer={isTopTextLayer}
+                      isBottomTextLayer={isBottomTextLayer}
+                    />
+                  );
+                } else {
+                  // Non-text layers don't have reorder buttons
+                  return (
+                    <SortableLayerItem
+                      key={layer.id}
+                      layer={layer}
+                      isTopTextLayer={false}
+                      isBottomTextLayer={false}
+                    />
+                  );
+                }
+              })}
             </div>
           </SortableContext>
         </DndContext>

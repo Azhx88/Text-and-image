@@ -57,7 +57,7 @@ const TextCustomizer: React.FC<TextCustomizerProps> = ({
   const [gridSize, setGridSize] = useState(20);
 
   // Get filter state from layer manager
-  const { selectedFilter, setSelectedFilter, applyToFullImage, setApplyToFullImage, filterIntensity, setFilterIntensity } = useLayerManager();
+  const { selectedFilter, setSelectedFilter, applyToFullImage, setApplyToFullImage, filterIntensity, setFilterIntensity, uploadedImageElement } = useLayerManager();
 
   // Touchpad handler — receives left/top offsets (in -50..50) and updates attributes
   const handleTouchpadChange = (leftOffset: number, topOffset: number) => {
@@ -328,7 +328,7 @@ const TextCustomizer: React.FC<TextCustomizerProps> = ({
               </p>
             </div>
             <FilterEditor
-              image={null}
+              image={uploadedImageElement}
               onFilterChange={setSelectedFilter}
               selectedFilter={selectedFilter}
               applyToFullImage={applyToFullImage}

@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { filters, applyFilter } from '@/lib/filters';
+import { filters, getFilterCSSStringWithIntensity } from '@/lib/filters';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Check } from 'lucide-react';
 
 interface FilterEditorProps {
   image: HTMLImageElement | null;
@@ -93,27 +94,71 @@ const FilterPreview: React.FC<FilterPreviewProps> = ({
 
   useEffect(() => {
     if (image && canvasRef.current) {
-      applyFilter(canvasRef.current, image, filterName);
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      // Set preview size
+      canvas.width = 96;
+      canvas.height = 96;
+
+      // Center-crop image to square
+      const aspectRatio = image.width / image.height;
+      let sx, sy, sw, sh;
+
+      if (aspectRatio > 1) {
+        // Landscape - crop sides
+        sh = image.height;
+        sw = image.height;
+        sx = (image.width - sw) / 2;
+        sy = 0;
+      } else {
+        // Portrait or square - crop top/bottom
+        sw = image.width;
+        sh = image.width;
+        sx = 0;
+        sy = (image.height - sh) / 2;
+      }
+
+      // Apply filter at 100% intensity for preview button
+      if (filterName !== 'original') {
+        const filterString = getFilterCSSStringWithIntensity(filterName, 100);
+        ctx.filter = filterString;
+      }
+
+      // Draw cropped image
+      ctx.drawImage(image, sx, sy, sw, sh, 0, 0, 96, 96);
+      ctx.filter = 'none';
     }
   }, [image, filterName]);
 
   return (
     <div
       className={cn(
-        'flex flex-col items-center space-y-2 cursor-pointer group',
-        isSelected && 'text-blue-500'
+        'relative flex flex-col items-center space-y-2 cursor-pointer group transition-all',
+        isSelected && 'scale-105'
       )}
       onClick={onClick}
     >
       <div
         className={cn(
-          'w-24 h-24 rounded-md overflow-hidden border-2 border-transparent group-hover:border-gray-400 transition-all',
-          isSelected ? 'border-blue-500' : 'border-gray-200'
+          'w-24 h-24 rounded-lg overflow-hidden border-2 transition-all relative',
+          isSelected
+            ? 'border-blue-500 shadow-lg shadow-blue-500/50 ring-2 ring-blue-500/20'
+            : 'border-gray-200 dark:border-gray-700 group-hover:border-blue-300 dark:group-hover:border-blue-600'
         )}
       >
         <canvas ref={canvasRef} className="w-full h-full object-cover" />
+        {isSelected && (
+          <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center shadow-md">
+            <Check className="w-3 h-3 text-white" strokeWidth={3} />
+          </div>
+        )}
       </div>
-      <span className="text-xs font-medium">{label}</span>
+      <span className={cn(
+        "text-xs font-medium text-center",
+        isSelected ? "text-blue-500 font-semibold" : "text-gray-600 dark:text-gray-400"
+      )}>{label}</span>
     </div>
   );
 };
