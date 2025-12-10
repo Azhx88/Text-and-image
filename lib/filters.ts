@@ -219,19 +219,69 @@ export const getFilterCSSString = (filterName: string): string => {
  * @returns A CSS filter string with interpolated values
  */
 export const getFilterCSSStringWithIntensity = (filterName: string, intensity: number): string => {
-  const filter = filters.find(f => f.name === filterName);
-  if (!filter || filterName === 'original' || intensity === 0) return 'none';
-  if (intensity === 100) return getFilterCSSString(filterName);
-  
-  const { contrast, saturate, brightness, hue } = filter.settings;
-  const t = intensity / 100; // 0.0 to 1.0
-  
-  // Interpolate each value from 1.0 (neutral) to the filter's value
-  const interpContrast = 1 + (contrast - 1) * t;
-  const interpSaturate = 1 + (saturate - 1) * t;
-  const interpBrightness = 1 + (brightness - 1) * t;
-  const interpHue = hue * t;
-  
-  return `brightness(c:\Users\ashwi\OneDrive\Desktop\desk\Attachments\Documents\Text-and-image{interpBrightness}) contrast(c:\Users\ashwi\OneDrive\Desktop\desk\Attachments\Documents\Text-and-image{interpContrast}) saturate(c:\Users\ashwi\OneDrive\Desktop\desk\Attachments\Documents\Text-and-image{interpSaturate}) hue-rotate(c:\Users\ashwi\OneDrive\Desktop\desk\Attachments\Documents\Text-and-image{interpHue}rad)`;
+  if (intensity === 0 || filterName === 'original') return 'none';
+
+  const t = intensity / 100; // Convert 0-100 to 0.0-1.0
+
+  // Each filter scales from neutral (no effect) to full effect based on intensity
+  switch (filterName) {
+    case 'vivid':
+      const satVivid = 1 + (0.3 * t); // 1.0 to 1.3
+      const contVivid = 1 + (0.25 * t); // 1.0 to 1.25
+      const brightVivid = 1 + (0.05 * t); // 1.0 to 1.05
+      return `saturate(${satVivid}) contrast(${contVivid}) brightness(${brightVivid})`;
+
+    case 'vivid-warm':
+      const satVW = 1 + (0.3 * t);
+      const contVW = 1 + (0.25 * t);
+      const hueVW = 0.03 * t; // 0 to 0.03 rad
+      const warmVW = 0.2 * t; // Will be used for warmth overlay
+      return `saturate(${satVW}) contrast(${contVW}) hue-rotate(${hueVW}rad) sepia(${warmVW})`;
+
+    case 'vivid-cool':
+      const satVC = 1 + (0.3 * t);
+      const contVC = 1 + (0.25 * t);
+      const hueVC = -0.03 * t; // 0 to -0.03 rad
+      const coolVC = -0.2 * t;
+      return `saturate(${satVC}) contrast(${contVC}) hue-rotate(${hueVC}rad)`;
+
+    case 'dramatic':
+      const contD = 1 + (0.35 * t); // 1.0 to 1.35
+      const satD = 1 - (0.2 * t); // 1.0 to 0.8
+      const brightD = 1 - (0.1 * t); // 1.0 to 0.9
+      return `contrast(${contD}) saturate(${satD}) brightness(${brightD})`;
+
+    case 'dramaticWarm':
+      const contDW = 1 + (0.4 * t); // 1.0 to 1.4
+      const brightDW = 1 - (0.07 * t); // 1.0 to 0.93
+      const satDW = 1 - (0.15 * t); // 1.0 to 0.85 (REDUCED from 1.1)
+      const sepiaDW = 0.12 * t; // 0 to 0.12 (REDUCED from 0.25)
+      return `contrast(${contDW}) brightness(${brightDW}) saturate(${satDW}) sepia(${sepiaDW})`;
+
+    case 'dramatic-cool':
+      const contDC = 1 + (0.35 * t); // 1.0 to 1.35
+      const satDC = 1 - (0.25 * t); // 1.0 to 0.75 (more desaturation for cooler look)
+      const brightDC = 1 - (0.1 * t); // 1.0 to 0.9
+      const hueDC = 15 * t; // 0 to 15deg (shift toward cyan/blue)
+      return `contrast(${contDC}) saturate(${satDC}) brightness(${brightDC}) hue-rotate(${hueDC}deg)`;
+
+    case 'mono':
+      return `grayscale(${t})`; // 0 to 1
+
+    case 'silvertone':
+      const grayST = 0.1 + (0.9 * t); // 0.1 to 1.0
+      const contST = 1 + (0.1 * t); // 1.0 to 1.1
+      const brightST = 1 + (0.05 * t); // 1.0 to 1.05
+      return `grayscale(${grayST}) contrast(${contST}) brightness(${brightST})`;
+
+    case 'noir':
+      const grayN = t; // 0 to 1
+      const contN = 1 + (0.25 * t); // 1.0 to 1.25
+      const brightN = 1 - (0.05 * t); // 1.0 to 0.95
+      return `grayscale(${grayN}) contrast(${contN}) brightness(${brightN})`;
+
+    default:
+      return 'none';
+  }
 };
 

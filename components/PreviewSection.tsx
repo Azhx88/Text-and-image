@@ -290,16 +290,20 @@ export const PreviewSection = () => {
             };
 
             const processLayers = async () => {
+                // Apply filter to canvas context BEFORE drawing if we have a filter
+                if (selectedFilter && selectedFilter !== 'original') {
+                    const filterString = getFilterCSSStringWithIntensity(selectedFilter, filterIntensity);
+                    ctx.filter = filterString;
+                }
+
                 for (const layer of sortedLayers) {
                     if (layer.visible) {
                         await renderLayerOnCanvas(layer);
                     }
                 }
 
-                // Apply filter to final composite before download
-                if (selectedFilter && selectedFilter !== 'original') {
-                    applyFilter(canvas, canvas, selectedFilter);
-                }
+                // Reset filter
+                ctx.filter = 'none';
 
                 triggerDownload();
             };
