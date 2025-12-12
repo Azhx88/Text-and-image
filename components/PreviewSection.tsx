@@ -227,33 +227,48 @@ export const PreviewSection = () => {
 
             const renderLayerOnCanvas = (layer: any) => {
                 return new Promise<void>((resolve) => {
+                    // Get color filter string
+                    const colorFilter = (selectedFilter && selectedFilter !== 'original')
+                        ? getFilterCSSStringWithIntensity(selectedFilter, filterIntensity)
+                        : '';
+
                     if (layer.type === 'full') {
-                        // Apply blur if active
+                        // Combine blur and color filter for background
+                        let combinedFilter = '';
+
                         if (backgroundBlur > 0) {
-                            // Max blur radius 15px for f/3.5 equivalent
                             const maxBlurRadius = 15;
-                            // Scale blur based on image width relative to a reference (e.g., 1000px)
                             const blurRadius = (backgroundBlur / 100) * maxBlurRadius * (canvas.width / 1000);
-                            ctx.filter = `blur(${blurRadius}px)`;
+                            combinedFilter = `blur(${blurRadius}px)`;
                         }
+
+                        if (colorFilter) {
+                            combinedFilter = combinedFilter ? `${combinedFilter} ${colorFilter}` : colorFilter;
+                        }
+
+                        ctx.filter = combinedFilter || 'none';
                         ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
-                        ctx.filter = 'none'; // Reset filter
+                        ctx.filter = 'none';
                         resolve();
                     } else if (layer.type === 'subject' && subjectImageUrl) {
                         const subjectImg = new (window as any).Image();
                         subjectImg.crossOrigin = "anonymous";
                         subjectImg.onload = () => {
+                            // Apply only color filter to subject, no blur
+                            ctx.filter = colorFilter || 'none';
                             ctx.drawImage(subjectImg, 0, 0, canvas.width, canvas.height);
+                            ctx.filter = 'none';
                             resolve();
                         };
-                        subjectImg.src = subjectImageUrl;
                         subjectImg.src = subjectImageUrl;
                     } else if (layer.type === 'text') {
                         const textSet = layer as TextLayer;
                         ctx.save();
 
-                        // No dynamic blur for text - simplified logic
-
+                        // Apply only color filter to text, no blur
+                        if (colorFilter) {
+                            ctx.filter = colorFilter;
+                        }
 
                         const scaledFontSize = textSet.fontSize * fontScale;
                         ctx.font = `${textSet.fontWeight} ${scaledFontSize}px ${getFontFamily(textSet.fontFamily)}`;
@@ -317,20 +332,11 @@ export const PreviewSection = () => {
             };
 
             const processLayers = async () => {
-                // Apply filter to canvas context BEFORE drawing if we have a filter
-                if (selectedFilter && selectedFilter !== 'original') {
-                    const filterString = getFilterCSSStringWithIntensity(selectedFilter, filterIntensity);
-                    ctx.filter = filterString;
-                }
-
                 for (const layer of sortedLayers) {
                     if (layer.visible) {
                         await renderLayerOnCanvas(layer);
                     }
                 }
-
-                // Reset filter
-                ctx.filter = 'none';
 
                 triggerDownload();
             };
