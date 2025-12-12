@@ -63,7 +63,7 @@ const TextCustomizer: React.FC<TextCustomizerProps> = ({
   const [activeTab, setActiveTab] = useState('transform');
 
   // Get filter and blur state from layer manager
-  const { selectedFilter, setSelectedFilter, applyToFullImage, setApplyToFullImage, filterIntensity, setFilterIntensity, uploadedImageElement, backgroundBlur, setBackgroundBlur } = useLayerManager();
+  const { selectedFilter, setSelectedFilter, applyToFullImage, setApplyToFullImage, filterIntensity, setFilterIntensity, uploadedImageElement, backgroundBlur, setBackgroundBlur, applyFilterToText, setApplyFilterToText } = useLayerManager();
 
   // Helper to calculate aperture from slider value (0-100)
   const getApertureFromSlider = (value: number) => {
@@ -373,6 +373,8 @@ const TextCustomizer: React.FC<TextCustomizerProps> = ({
               onApplyToFullImageChange={setApplyToFullImage}
               filterIntensity={filterIntensity}
               onFilterIntensityChange={setFilterIntensity}
+              applyFilterToText={applyFilterToText}
+              onApplyFilterToTextChange={setApplyFilterToText}
             />
           </TabsContent>
         </Tabs>

@@ -11,7 +11,7 @@ import { useDragToMove } from '@/hooks/use-drag-to-move';
 import { usePinchToZoom } from '@/hooks/use-pinch-to-zoom';
 import { getFilterCSSStringWithIntensity, applyFilter } from '@/lib/filters';
 
-const TextLayerComponent = ({ textSet, handleAttributeChange, previewContainerRef }: { textSet: TextLayer, handleAttributeChange: (id: string, attribute: string, value: any) => void, previewContainerRef: React.RefObject<HTMLDivElement> }) => {
+const TextLayerComponent = ({ textSet, handleAttributeChange, previewContainerRef, applyFilterToText, selectedFilter, filterIntensity }: { textSet: TextLayer, handleAttributeChange: (id: string, attribute: string, value: any) => void, previewContainerRef: React.RefObject<HTMLDivElement>, applyFilterToText: boolean, selectedFilter: string, filterIntensity: number }) => {
     const textRef = useRef<HTMLDivElement>(null);
 
     const handleDrag = useCallback((dx: number, dy: number) => {
@@ -54,6 +54,7 @@ const TextLayerComponent = ({ textSet, handleAttributeChange, previewContainerRe
                 letterSpacing: `${textSet.letterSpacing}px`,
                 transformStyle: 'preserve-3d',
                 textShadow: textSet.shadowSize > 0 ? `0 ${textSet.shadowSize}px ${textSet.shadowSize * 2}px ${textSet.shadowColor}` : 'none',
+                filter: applyFilterToText ? getFilterCSSStringWithIntensity(selectedFilter, filterIntensity) : 'none',
                 cursor: 'grab',
                 transition: 'all 0.2s ease-out'
             }}
@@ -65,16 +66,52 @@ const TextLayerComponent = ({ textSet, handleAttributeChange, previewContainerRe
 };
 
 export const PreviewSection = () => {
-    const { layers, handleAttributeChange, setLayers, selectedFilter, filterIntensity, setUploadedImageElement, backgroundBlur } = useLayerManager();
+    const { layers, handleAttributeChange, setLayers, selectedFilter, filterIntensity, setUploadedImageElement, backgroundBlur, applyFilterToText } = useLayerManager();
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [subjectImageUrl, setSubjectImageUrl] = useState<string | null>(null);
     const [processingProgress, setProcessingProgress] = useState<number>(0);
+    const [imageBounds, setImageBounds] = useState<{ width: number; height: number; left: number; top: number } | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const previewContainerRef = useRef<HTMLDivElement>(null);
     const imageCache = useRef<Map<string, string>>(new Map());
+
+    // Calculate actual image render bounds
+    useEffect(() => {
+        if (!selectedImage || !previewContainerRef.current) return;
+
+        const img = new (window as any).Image();
+        img.onload = () => {
+            const container = previewContainerRef.current;
+            if (!container) return;
+
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+            const imageAspect = img.naturalWidth / img.naturalHeight;
+            const containerAspect = containerWidth / containerHeight;
+
+            let renderWidth, renderHeight, left, top;
+
+            if (imageAspect > containerAspect) {
+                // Image is wider - fit to width
+                renderWidth = containerWidth;
+                renderHeight = containerWidth / imageAspect;
+                left = 0;
+                top = (containerHeight - renderHeight) / 2;
+            } else {
+                // Image is taller - fit to height
+                renderHeight = containerHeight;
+                renderWidth = containerHeight * imageAspect;
+                top = 0;
+                left = (containerWidth - renderWidth) / 2;
+            }
+
+            setImageBounds({ width: renderWidth, height: renderHeight, left, top });
+        };
+        img.src = selectedImage;
+    }, [selectedImage]);
 
     const handleUploadImage = () => {
         if (fileInputRef.current) {
@@ -401,7 +438,7 @@ export const PreviewSection = () => {
                         <div
                             ref={previewContainerRef}
                             className="aspect-video w-full rounded-2xl border-2 border-slate-200/50 bg-slate-100 dark:bg-slate-900/50 dark:border-slate-700/50 p-6 relative overflow-hidden flex items-center justify-center shadow-2xl backdrop-blur-sm"
-                            style={{ touchAction: 'none', backgroundImage: `url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' stroke='%23e2e8f0' stroke-width='4' stroke-dasharray='6%2c 14' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e")`, filter: getFilterCSSStringWithIntensity(selectedFilter, filterIntensity) }}
+                            style={{ touchAction: 'none', backgroundImage: `url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' stroke='%23e2e8f0' stroke-width='4' stroke-dasharray='6%2c 14' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e")` }}
                         >
                             {isLoading ? (
                                 <div className='flex flex-col items-center gap-4 p-8 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-lg min-w-[320px]'>
@@ -424,53 +461,74 @@ export const PreviewSection = () => {
                                 </div>
                             ) : (
                                 <>
-                                    {[...layers].filter(layer => layer.visible).sort((a, b) => a.order - b.order).map(layer => {
-                                        switch (layer.type) {
-                                            case 'full':
-                                                return (
-                                                    <Image
-                                                        key={layer.id}
-                                                        src={selectedImage}
-                                                        alt="Full Image"
-                                                        layout="fill"
-                                                        objectFit="contain"
-                                                        objectPosition="center"
-                                                        className="absolute inset-0 object-contain pointer-events-none"
-                                                        draggable={false}
-                                                        style={{
-                                                            // Max blur radius 15px
-                                                            filter: backgroundBlur > 0 ? `blur(${(backgroundBlur / 100) * 15}px)` : 'none',
-                                                            transition: 'filter 0.1s ease-out'
-                                                        }}
-                                                    />
-                                                );
-                                            case 'subject':
-                                                return subjectImageUrl && (
-                                                    <Image
-                                                        key={layer.id}
-                                                        src={subjectImageUrl}
-                                                        alt="Subject Only"
-                                                        layout="fill"
-                                                        objectFit="contain"
-                                                        objectPosition="center"
-                                                        className="absolute inset-0 object-contain pointer-events-none"
-                                                        draggable={false}
-                                                    />
-                                                );
-                                            case 'text':
-                                                const textSet = layer as TextLayer;
-                                                return (
-                                                    <TextLayerComponent
-                                                        key={textSet.id}
-                                                        textSet={textSet}
-                                                        handleAttributeChange={handleAttributeChange}
-                                                        previewContainerRef={previewContainerRef}
-                                                    />
-                                                );
-                                            default:
-                                                return null;
-                                        }
-                                    })}
+                                    {/* Wrapper with overflow hidden to clip text at exact image boundaries */}
+                                    <div
+                                        className="absolute overflow-hidden"
+                                        style={imageBounds ? {
+                                            width: `${imageBounds.width}px`,
+                                            height: `${imageBounds.height}px`,
+                                            left: `${imageBounds.left}px`,
+                                            top: `${imageBounds.top}px`
+                                        } : { inset: 0 }}
+                                    >
+                                        {[...layers].filter(layer => layer.visible).sort((a, b) => a.order - b.order).map(layer => {
+                                            switch (layer.type) {
+                                                case 'full':
+                                                    return (
+                                                        <Image
+                                                            key={layer.id}
+                                                            src={selectedImage}
+                                                            alt="Full Image"
+                                                            layout="fill"
+                                                            objectFit="contain"
+                                                            objectPosition="center"
+                                                            className="absolute inset-0 object-contain pointer-events-none"
+                                                            draggable={false}
+                                                            style={{
+                                                                // Blur + color filter for background
+                                                                filter: [
+                                                                    backgroundBlur > 0 ? `blur(${(backgroundBlur / 100) * 15}px)` : '',
+                                                                    getFilterCSSStringWithIntensity(selectedFilter, filterIntensity)
+                                                                ].filter(Boolean).join(' ') || 'none',
+                                                                transition: 'filter 0.1s ease-out'
+                                                            }}
+                                                        />
+                                                    );
+                                                case 'subject':
+                                                    return subjectImageUrl && (
+                                                        <Image
+                                                            key={layer.id}
+                                                            src={subjectImageUrl}
+                                                            alt="Subject Only"
+                                                            layout="fill"
+                                                            objectFit="contain"
+                                                            objectPosition="center"
+                                                            className="absolute inset-0 object-contain pointer-events-none"
+                                                            draggable={false}
+                                                            style={{
+                                                                // Color filter for subject (no blur)
+                                                                filter: getFilterCSSStringWithIntensity(selectedFilter, filterIntensity)
+                                                            }}
+                                                        />
+                                                    );
+                                                case 'text':
+                                                    const textSet = layer as TextLayer;
+                                                    return (
+                                                        <TextLayerComponent
+                                                            key={textSet.id}
+                                                            textSet={textSet}
+                                                            handleAttributeChange={handleAttributeChange}
+                                                            previewContainerRef={previewContainerRef}
+                                                            applyFilterToText={applyFilterToText}
+                                                            selectedFilter={selectedFilter}
+                                                            filterIntensity={filterIntensity}
+                                                        />
+                                                    );
+                                                default:
+                                                    return null;
+                                            }
+                                        })}
+                                    </div>
                                 </>
                             )}
                         </div>

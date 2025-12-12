@@ -15,13 +15,15 @@ interface FontFamilyPickerProps {
   currentFont: string;
   handleAttributeChange: (attribute: string, value: string) => void;
   userId: string;
+  previewText?: string; // Text from current layer
 }
 
 const FontFamilyPicker: React.FC<FontFamilyPickerProps> = ({
   attribute,
   currentFont,
   handleAttributeChange,
-  userId
+  userId,
+  previewText = 'Sample' // Default fallback text
 }) => {
   const [isPaidUser, setIsPaidUser] = useState(true);
   const [loadingFonts, setLoadingFonts] = useState<Set<string>>(new Set());
@@ -93,14 +95,30 @@ const FontFamilyPicker: React.FC<FontFamilyPickerProps> = ({
                     value={font.name}
                     key={font.name}
                     onSelect={() => handleFontSelect(font.name)}
-                    className='hover:cursor-pointer'
-                    style={getPreviewStyle(font.name)}
+                    className={cn(
+                      'hover:cursor-pointer transition-all duration-200',
+                      'hover:bg-gradient-to-r hover:from-blue-600/30 hover:to-purple-600/30 hover:translate-x-1',
+                      font.name === currentFont && 'bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold shadow-lg shadow-blue-500/30'
+                    )}
                   >
-                    {font.label}
-                    {loadingFonts.has(font.name) && <span className="ml-2 text-xs text-muted-foreground">Loading...</span>}
+                    <div className="flex items-center justify-between w-full gap-3">
+                      <span
+                        className="text-sm flex-shrink-0"
+                        style={{ maxWidth: '45%', fontFamily: getFontFamily(font.name) }}
+                      >
+                        {font.label}
+                        {loadingFonts.has(font.name) && <span className="ml-2 text-xs opacity-70">Loading...</span>}
+                      </span>
+                      <span
+                        className="text-base opacity-80 flex-1 text-right truncate"
+                        style={getPreviewStyle(font.name)}
+                      >
+                        {previewText}
+                      </span>
+                    </div>
                     <CheckIcon
                       className={cn(
-                        "ml-auto h-4 w-4",
+                        "ml-2 h-4 w-4 flex-shrink-0",
                         font.name === currentFont ? "opacity-100" : "opacity-0"
                       )}
                     />
@@ -115,18 +133,32 @@ const FontFamilyPicker: React.FC<FontFamilyPickerProps> = ({
                   key={font.name}
                   onSelect={() => handleFontSelect(font.name)}
                   className={cn(
-                    'hover:cursor-pointer',
-                    !isPaidUser && 'opacity-50 hover:cursor-not-allowed'
+                    'hover:cursor-pointer transition-all duration-200',
+                    !isPaidUser && 'opacity-50 hover:cursor-not-allowed',
+                    isPaidUser && 'hover:bg-gradient-to-r hover:from-blue-600/30 hover:to-purple-600/30 hover:translate-x-1',
+                    font.name === currentFont && 'bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold shadow-lg shadow-blue-500/30'
                   )}
-                  style={getPreviewStyle(font.name)}
                 >
-                  {font.label}
-                  {loadingFonts.has(font.name) && <span className="ml-2 text-xs text-muted-foreground">Loading...</span>}
-                  {!isPaidUser && <LockClosedIcon className="ml-auto h-4 w-4" />}
+                  <div className="flex items-center justify-between w-full gap-3">
+                    <span
+                      className="text-sm flex-shrink-0"
+                      style={{ maxWidth: '45%', fontFamily: getFontFamily(font.name) }}
+                    >
+                      {font.label}
+                      {loadingFonts.has(font.name) && <span className="ml-2 text-xs opacity-70">Loading...</span>}
+                    </span>
+                    <span
+                      className="text-base opacity-80 flex-1 text-right truncate"
+                      style={getPreviewStyle(font.name)}
+                    >
+                      {previewText}
+                    </span>
+                  </div>
+                  {!isPaidUser && <LockClosedIcon className="ml-2 h-4 w-4 flex-shrink-0" />}
                   {isPaidUser && (
                     <CheckIcon
                       className={cn(
-                        "ml-auto h-4 w-4",
+                        "ml-2 h-4 w-4 flex-shrink-0",
                         font.name === currentFont ? "opacity-100" : "opacity-0"
                       )}
                     />

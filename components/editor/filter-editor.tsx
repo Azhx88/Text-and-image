@@ -16,6 +16,8 @@ interface FilterEditorProps {
   onApplyToFullImageChange: (checked: boolean) => void;
   filterIntensity: number;
   onFilterIntensityChange: (intensity: number) => void;
+  applyFilterToText: boolean;
+  onApplyFilterToTextChange: (apply: boolean) => void;
 }
 
 const FilterEditor: React.FC<FilterEditorProps> = ({
@@ -26,6 +28,8 @@ const FilterEditor: React.FC<FilterEditorProps> = ({
   onApplyToFullImageChange,
   filterIntensity,
   onFilterIntensityChange,
+  applyFilterToText,
+  onApplyFilterToTextChange,
 }) => {
   return (
     <div className="w-full px-4">
@@ -71,6 +75,31 @@ const FilterEditor: React.FC<FilterEditorProps> = ({
         </div>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
+
+      {/* Apply Filter to Text Toggle */}
+      <div className="mt-6 pt-6 border-t border-border/50">
+        <button
+          onClick={() => onApplyFilterToTextChange(!applyFilterToText)}
+          className={cn(
+            "w-full flex items-center justify-center gap-3 px-5 py-3.5 rounded-lg font-medium text-sm transition-all duration-200",
+            applyFilterToText
+              ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30 hover:from-blue-500 hover:to-purple-500 hover:shadow-blue-500/40"
+              : "bg-muted/50 text-muted-foreground hover:bg-muted/70 border border-border/50"
+          )}
+        >
+          <span
+            className={cn(
+              "w-5 h-5 rounded flex items-center justify-center text-xs font-bold transition-all",
+              applyFilterToText
+                ? "bg-white/20 text-white"
+                : "bg-muted text-transparent"
+            )}
+          >
+            ✓
+          </span>
+          <span>Apply Filter to Text</span>
+        </button>
+      </div>
     </div>
   );
 };
