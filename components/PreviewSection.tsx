@@ -604,28 +604,55 @@ export const PreviewSection = () => {
                     </button>
 
                     {/* Before / After examples */}
-                    <div className="w-full max-w-2xl">
-                        <p className="text-xs uppercase tracking-widest text-white/30 text-center mb-5">Examples</p>
-                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                            {[
-                                { before: '/img/example-before-1.jpg', after: '/img/example-after-1.png' },
-                                { before: '/img/example-before-2.jpg', after: '/img/example-after-2.png' },
-                            ].map((ex, i) => (
-                                <div key={i} className="flex flex-col gap-2">
-                                    <div className="relative rounded-xl overflow-hidden aspect-video bg-black/30"
-                                        style={{ boxShadow: '0 0 0 1px rgba(255,255,255,0.06)' }}>
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img src={ex.before} alt={`Before ${i + 1}`} className="w-full h-full object-cover opacity-60" />
-                                        <span className="absolute top-2 left-2 text-[9px] uppercase tracking-widest text-white/40 px-1.5 py-0.5 rounded bg-black/40">Before</span>
+                    <div className="w-full max-w-2xl space-y-5">
+                        <p className="text-xs uppercase tracking-widest text-white/30 text-center">Examples</p>
+
+                        {/* ── Landscape pair (bike) — 16:10 frames ── */}
+                        <div>
+                            <p className="text-[9px] uppercase tracking-widest text-white/20 mb-2 ml-0.5">Bike / vehicle</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                {[
+                                    { src: '/img/example-before-2.webp', label: 'Before', ring: 'rgba(255,255,255,0.06)', labelCls: 'text-white/40 bg-black/50' },
+                                    { src: '/img/example-after-2.webp',  label: 'After',  ring: 'rgba(167,139,250,0.25)', labelCls: 'text-violet-300/80 bg-violet-900/50' },
+                                ].map(({ src, label, ring, labelCls }) => (
+                                    <div key={label} className="relative rounded-xl overflow-hidden bg-[#050507]"
+                                        style={{ aspectRatio: '16/10', boxShadow: `0 0 0 1px ${ring}` }}>
+                                        <Image
+                                            src={src}
+                                            alt={`Bike ${label}`}
+                                            fill
+                                            sizes="(max-width: 640px) 45vw, 320px"
+                                            className="object-contain"
+                                            style={{ opacity: label === 'Before' ? 0.65 : 1 }}
+                                        />
+                                        <span className={`absolute top-2 left-2 text-[9px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded ${labelCls}`}>{label}</span>
                                     </div>
-                                    <div className="relative rounded-xl overflow-hidden aspect-video bg-black/30"
-                                        style={{ boxShadow: '0 0 0 1px rgba(167,139,250,0.2)' }}>
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img src={ex.after} alt={`After ${i + 1}`} className="w-full h-full object-cover" />
-                                        <span className="absolute top-2 left-2 text-[9px] uppercase tracking-widest text-violet-300/70 px-1.5 py-0.5 rounded bg-violet-900/40">After</span>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* ── Portrait pair (person) — 2:3 frames ── */}
+                        <div>
+                            <p className="text-[9px] uppercase tracking-widest text-white/20 mb-2 ml-0.5">Portrait</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                {[
+                                    { src: '/img/example-before-1.webp', label: 'Before', ring: 'rgba(255,255,255,0.06)', labelCls: 'text-white/40 bg-black/50' },
+                                    { src: '/img/example-after-1.webp',  label: 'After',  ring: 'rgba(167,139,250,0.25)', labelCls: 'text-violet-300/80 bg-violet-900/50' },
+                                ].map(({ src, label, ring, labelCls }) => (
+                                    <div key={label} className="relative rounded-xl overflow-hidden bg-[#050507]"
+                                        style={{ aspectRatio: '2/3', boxShadow: `0 0 0 1px ${ring}` }}>
+                                        <Image
+                                            src={src}
+                                            alt={`Portrait ${label}`}
+                                            fill
+                                            sizes="(max-width: 640px) 45vw, 320px"
+                                            className="object-contain"
+                                            style={{ opacity: label === 'Before' ? 0.65 : 1 }}
+                                        />
+                                        <span className={`absolute top-2 left-2 text-[9px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded ${labelCls}`}>{label}</span>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
