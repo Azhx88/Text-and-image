@@ -32,33 +32,30 @@ const FilterEditor: React.FC<FilterEditorProps> = ({
   onApplyFilterToTextChange,
 }) => {
   return (
-    <div className="w-full px-4">
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-gray-500">Select a filter to apply.</p>
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="apply-full-image"
-            checked={applyToFullImage}
-            onCheckedChange={onApplyToFullImageChange}
+    <div className="w-full space-y-4">
+      {/* Intensity + full-image toggle */}
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-white/40">Intensity</span>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="apply-full-image"
+              checked={applyToFullImage}
+              onCheckedChange={onApplyToFullImageChange}
+              className="data-[state=checked]:bg-violet-500"
+            />
+            <Label htmlFor="apply-full-image" className="text-[10px] text-white/35 cursor-pointer">Full image</Label>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <input
+            type="range" min="0" max="100" value={filterIntensity}
+            onChange={e => onFilterIntensityChange(Number(e.target.value))}
+            className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer"
+            style={{ background: `linear-gradient(to right, #a78bfa ${filterIntensity}%, rgba(255,255,255,0.08) ${filterIntensity}%)`, accentColor: '#a78bfa' }}
           />
-          <Label htmlFor="apply-full-image" className="text-sm">
-            Apply to Full Image
-          </Label>
+          <span className="text-xs text-white/30 tabular-nums w-8 text-right">{filterIntensity}%</span>
         </div>
-      </div>
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <Label className="text-sm">Intensity</Label>
-          <span className="text-sm text-gray-500">{filterIntensity}%</span>
-        </div>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          value={filterIntensity}
-          onChange={(e) => onFilterIntensityChange(Number(e.target.value))}
-          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-        />
       </div>
       <ScrollArea className="w-full whitespace-nowrap">
         <div className="flex space-x-4 pb-4">
@@ -77,27 +74,18 @@ const FilterEditor: React.FC<FilterEditorProps> = ({
       </ScrollArea>
 
       {/* Apply Filter to Text Toggle */}
-      <div className="mt-6 pt-6 border-t border-border/50">
+      <div className="pt-3 border-t border-white/[0.05]">
         <button
           onClick={() => onApplyFilterToTextChange(!applyFilterToText)}
           className={cn(
-            "w-full flex items-center justify-center gap-3 px-5 py-3.5 rounded-lg font-medium text-sm transition-all duration-200",
+            "w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 border",
             applyFilterToText
-              ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30 hover:from-blue-500 hover:to-purple-500 hover:shadow-blue-500/40"
-              : "bg-muted/50 text-muted-foreground hover:bg-muted/70 border border-border/50"
+              ? "bg-violet-500/10 border-violet-500/25 text-violet-300"
+              : "bg-white/[0.03] border-white/[0.07] text-white/35 hover:bg-white/[0.06]"
           )}
         >
-          <span
-            className={cn(
-              "w-5 h-5 rounded flex items-center justify-center text-xs font-bold transition-all",
-              applyFilterToText
-                ? "bg-white/20 text-white"
-                : "bg-muted text-transparent"
-            )}
-          >
-            ✓
-          </span>
-          <span>Apply Filter to Text</span>
+          <Check className={cn("w-3 h-3 transition-all", applyFilterToText ? "opacity-100 text-violet-400" : "opacity-0")} />
+          Apply filter to text
         </button>
       </div>
     </div>
@@ -171,22 +159,22 @@ const FilterPreview: React.FC<FilterPreviewProps> = ({
     >
       <div
         className={cn(
-          'w-24 h-24 rounded-lg overflow-hidden border-2 transition-all relative',
+          'w-[72px] h-[72px] rounded-xl overflow-hidden border transition-all relative',
           isSelected
-            ? 'border-blue-500 shadow-lg shadow-blue-500/50 ring-2 ring-blue-500/20'
-            : 'border-gray-200 dark:border-gray-700 group-hover:border-blue-300 dark:group-hover:border-blue-600'
+            ? 'border-violet-500/70 shadow-lg shadow-violet-500/25 scale-105'
+            : 'border-white/10 group-hover:border-violet-400/40'
         )}
       >
         <canvas ref={canvasRef} className="w-full h-full object-cover" />
         {isSelected && (
-          <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center shadow-md">
-            <Check className="w-3 h-3 text-white" strokeWidth={3} />
+          <div className="absolute top-1 right-1 w-4 h-4 bg-violet-500 rounded-full flex items-center justify-center shadow">
+            <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
           </div>
         )}
       </div>
       <span className={cn(
-        "text-xs font-medium text-center",
-        isSelected ? "text-blue-500 font-semibold" : "text-gray-600 dark:text-gray-400"
+        "text-[9px] font-semibold uppercase tracking-wide text-center",
+        isSelected ? "text-violet-300" : "text-white/25"
       )}>{label}</span>
     </div>
   );

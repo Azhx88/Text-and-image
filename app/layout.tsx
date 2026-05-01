@@ -1,34 +1,30 @@
 import type { Metadata } from "next";
-import { Inter, Roboto, Poppins } from 'next/font/google'
+import { Inter } from 'next/font/google'
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { LayerManagerProvider } from "@/context/useLayerManager";
 import FontPreloader from "@/components/FontPreloader";
 
-const inter = Inter({ subsets: ['latin'], display: 'swap' })
-const roboto = Roboto({ subsets: ['latin'], weight: ['400', '700'] })
-const poppins = Poppins({ subsets: ['latin'], weight: ['400', '600'] })
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-sans',
+})
 
 export const metadata: Metadata = {
   title: "TextFX",
   description: "Text and image layer editor",
-  icons: {
-    icon: '/img/vishal_b_0702241200.jpg',
-  },
+  icons: { icon: '/img/logo.png' },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.className}`}>
-      <body>
+    <html lang="en" className={inter.variable}>
+      <body className={inter.className}>
         <FontPreloader />
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >

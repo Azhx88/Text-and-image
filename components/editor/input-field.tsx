@@ -1,8 +1,6 @@
 'use client'
 
 import React from 'react';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 
 interface InputFieldProps {
   attribute: string;
@@ -11,31 +9,15 @@ interface InputFieldProps {
   handleAttributeChange: (attribute: string, value: string) => void;
 }
 
-const InputField: React.FC<InputFieldProps> = ({
-  attribute,
-  label,
-  currentValue,
-  handleAttributeChange
-}) => {
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    handleAttributeChange(attribute, value);
-  };
-
-  return (
-    <>
-      <div className="flex flex-col items-start">
-        {/* <Label htmlFor={attribute}>{label}</Label> */}
-        <Input
-          type="text"
-          placeholder='text'
-          value={currentValue}
-          onChange={handleInputChange}
-          className='mt-2'
-        />
-      </div>
-    </>
-  );
-};
+const InputField: React.FC<InputFieldProps> = ({ attribute, label, currentValue, handleAttributeChange }) => (
+  <input
+    type="text"
+    placeholder="Your text here…"
+    value={currentValue}
+    onChange={e => handleAttributeChange(attribute, e.target.value)}
+    className="w-full h-10 px-3 rounded-xl text-sm text-white/85 placeholder:text-white/20 border border-white/10 focus:outline-none focus:border-violet-500/60 focus:ring-1 focus:ring-violet-500/20 transition-all"
+    style={{ background: 'rgba(255,255,255,0.05)' }}
+  />
+);
 
 export default InputField;

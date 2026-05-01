@@ -1,10 +1,7 @@
 'use client'
 
-import React from 'react';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import React, { useState } from 'react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from '@/components/ui/dropdown-menu';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ChromePicker } from 'react-color';
 import { colors } from '@/constants/colors';
 import { PipetteIcon } from 'lucide-react';
@@ -16,78 +13,81 @@ interface ColorPickerProps {
   handleAttributeChange: (attribute: string, value: any) => void;
 }
 
-const ColorPicker: React.FC<ColorPickerProps> = ({
-  attribute,
-  label,
-  currentColor,
-  handleAttributeChange,
-}) => {
+const ColorPicker: React.FC<ColorPickerProps> = ({ attribute, label, currentColor, handleAttributeChange }) => {
 
   const openEyeDropper = async () => {
     if ('EyeDropper' in window) {
-      const eyeDropper = new (window as any).EyeDropper();
       try {
-        const { sRGBHex } = await eyeDropper.open();
+        const { sRGBHex } = await (new (window as any).EyeDropper()).open();
         handleAttributeChange(attribute, sRGBHex);
-      } catch (e) {
-        console.log(e)
-      }
+      } catch { /* cancelled */ }
     }
-  }
+  };
 
   return (
-    <div className={`flex flex-col gap-2`}>
-      <Label htmlFor={attribute}>{label}</Label>
+    <div className="space-y-3">
+      {/* Label */}
+      <span className="text-[10px] font-semibold uppercase tracking-widest text-white/40">{label}</span>
 
-      <div className='flex flex-wrap gap-1 p-1'>
-        <DropdownMenu>
-          <DropdownMenuTrigger>
-            <Button variant='outline' className='gap-2'>
-              <div
-                style={{ background: currentColor }}
-                className="rounded-md h-full w-6 cursor-pointer active:scale-105"
-              />
-              <span>{currentColor}</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className='flex flex-col items-center justify-center w-[240px]'
-            side='left'
-            sideOffset={10}
+      {/* ── Swatch grid ── */}
+      <div className="grid grid-cols-6 gap-2 mt-2">
+        {colors.map(color => (
+          <button
+            key={color}
+            onClick={() => handleAttributeChange(attribute, color)}
+            title={color}
+            className="relative w-9 h-9 rounded-xl transition-all duration-150 focus:outline-none"
+            style={{ background: color }}
           >
-            <Tabs defaultValue='colorPicker'>
-              <TabsList className='grid w-full grid-cols-3'>
-                <TabsTrigger value='colorPicker'>🎨</TabsTrigger>
-                <TabsTrigger value='suggestions'>⚡️</TabsTrigger>
-                <TabsTrigger value='eyeDropper'>
-                  <PipetteIcon className='h-4 w-4' />
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value='colorPicker'>
-                <ChromePicker
-                  color={currentColor}
-                  onChange={(color) => handleAttributeChange(attribute, color.hex)}
-                />
-              </TabsContent>
-              <TabsContent value='suggestions'>
-                <div className='flex flex-wrap gap-1 mt-2'>
-                  {colors.map((color) => (
-                    <div
-                      key={color}
-                      style={{ background: color }}
-                      className="rounded-md h-6 w-6 cursor-pointer active-scale-105"
-                      onClick={() => handleAttributeChange(attribute, color)}
-                    />
-                  ))}
-                </div>
-              </TabsContent>
-              <TabsContent value='eyeDropper' className='flex items-center justify-center h-48'>
-                <Button onClick={openEyeDropper} className='gap-2'>
-                  <PipetteIcon className='h-4 w-4' />
-                  Pick a color
-                </Button>
-              </TabsContent>
-            </Tabs> 
+            {currentColor.toLowerCase() === color.toLowerCase() && (
+              <span className="absolute inset-0 flex items-center justify-center">
+                <span className="w-2.5 h-2.5 rounded-full border-2 border-white shadow-md" />
+              </span>
+            )}
+            <span
+              className={[
+                'absolute inset-0 rounded-xl border-2 transition-all',
+                currentColor.toLowerCase() === color.toLowerCase()
+                  ? 'border-violet-400 scale-110 shadow-[0_0_0_1px_rgba(167,139,250,0.4)]'
+                  : 'border-transparent hover:border-white/30 hover:scale-105',
+              ].join(' ')}
+            />
+          </button>
+        ))}
+      </div>
+
+      {/* ── Current color row + custom / eyedropper ── */}
+      <div className="flex items-center gap-3 pt-1">
+        {/* Current color swatch */}
+        <div
+          className="w-8 h-8 rounded-xl border border-white/15 flex-shrink-0"
+          style={{ background: currentColor }}
+        />
+        <span className="text-xs text-white/35 font-mono flex-1">{currentColor}</span>
+
+        {/* Eyedropper */}
+        {'EyeDropper' in (typeof window !== 'undefined' ? window : {})}
+        <button
+          onClick={openEyeDropper}
+          className="h-7 w-7 flex items-center justify-center rounded-lg border border-white/10 text-white/30 hover:text-violet-300 hover:border-violet-500/40 transition-all"
+          title="Eyedropper"
+        >
+          <PipetteIcon className="h-3.5 w-3.5" />
+        </button>
+
+        {/* Custom color picker */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="h-7 px-2.5 rounded-lg border border-white/10 text-[10px] font-semibold text-white/40 hover:text-violet-300 hover:border-violet-500/40 transition-all">
+              Custom
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="left" sideOffset={8} className="p-0 border-0 bg-transparent shadow-2xl">
+            <ChromePicker
+              color={currentColor}
+              onChange={c => handleAttributeChange(attribute, c.hex)}
+              styles={{ default: { picker: { background: '#16161f', boxShadow: '0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.08)' } } }}
+            />
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

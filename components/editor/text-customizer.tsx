@@ -113,50 +113,33 @@ const TextCustomizer: React.FC<TextCustomizerProps> = ({
   };
 
   return (
-    <AccordionItem value={`item-${textSet.id}`} className="border-0 mb-4 bg-slate-100 dark:bg-slate-800 rounded-xl data-[state=open]:rounded-b-none transition-all duration-200">
-      <div className="flex items-center justify-between w-full px-4 py-3 group">
-        <AccordionTrigger className="hover:no-underline flex-1 text-left p-0">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center">
-              <LayersIcon className="h-4 w-4 text-white" />
+    <AccordionItem value={`item-${textSet.id}`} className="border-0 rounded-2xl overflow-hidden border border-white/[0.07]"
+      style={{ background: 'rgba(255,255,255,0.03)' }}>
+      <div className="flex items-center justify-between w-full px-3.5 py-3 group">
+        <AccordionTrigger className="hover:no-underline flex-1 text-left p-0 [&>svg]:text-white/20 [&>svg]:h-3.5 [&>svg]:w-3.5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-xl bg-violet-500/12 border border-violet-500/20 flex items-center justify-center">
+              <LayersIcon className="h-3.5 w-3.5 text-violet-400" />
             </div>
             <div className="flex flex-col items-start">
-              <span className="font-medium text-slate-900 dark:text-white text-sm">
-                {textSet.text || "Text Layer"}
-              </span>
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                {textSet.fontFamily} • {textSet.fontSize}px
-              </span>
+              <span className="font-semibold text-white/85 text-xs leading-tight">{textSet.text || 'Text Layer'}</span>
+              <span className="text-[10px] text-white/30 leading-tight mt-0.5">{textSet.fontFamily} · {textSet.fontSize}px</span>
             </div>
           </div>
         </AccordionTrigger>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pl-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              duplicateTextSet(textSet);
-            }}
-            className="h-8 w-8 p-0 hover:bg-slate-200 dark:hover:bg-slate-700"
-          >
-            <CopyIcon className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              removeTextSet(textSet.id);
-            }}
-            className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-          >
-            <TrashIcon className="h-3.5 w-3.5" />
-          </Button>
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity pl-2">
+          <button onClick={e => { e.stopPropagation(); duplicateTextSet(textSet); }}
+            className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-white/10 text-white/30 hover:text-white/70 transition-colors">
+            <CopyIcon className="h-3 w-3" />
+          </button>
+          <button onClick={e => { e.stopPropagation(); removeTextSet(textSet.id); }}
+            className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-red-500/15 text-white/30 hover:text-red-400 transition-colors">
+            <TrashIcon className="h-3 w-3" />
+          </button>
         </div>
       </div>
 
-      <AccordionContent className="bg-white dark:bg-slate-900 rounded-b-xl border border-t-0 border-slate-200 dark:border-slate-700 p-4 space-y-4">
+      <AccordionContent className="border-t border-white/[0.05] p-3.5 space-y-3" style={{ background: 'rgba(10,10,15,0.6)' }}>
         <InputField
           attribute="text"
           label="Text Content"
@@ -167,11 +150,16 @@ const TextCustomizer: React.FC<TextCustomizerProps> = ({
         />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="transform">Transform</TabsTrigger>
-            <TabsTrigger value="style">Style</TabsTrigger>
-            <TabsTrigger value="color">Color</TabsTrigger>
-            <TabsTrigger value="filters">Filters</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 h-8 rounded-xl p-0.5" style={{ background: 'rgba(255,255,255,0.05)' }}>
+            {(['transform','style','color','filters'] as const).map(tab => (
+              <TabsTrigger key={tab} value={tab}
+                className="text-[10px] font-semibold rounded-lg text-white/40 transition-all
+                  data-[state=active]:text-violet-300 data-[state=active]:shadow-none"
+                style={{ ['--tw-data-active-bg' as any]: 'rgba(167,139,250,0.12)' }}
+              >
+                {tab === 'transform' ? 'Move' : tab === 'filters' ? 'FX' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
           {/* ---------- Transform Tab ---------- */}
@@ -295,17 +283,10 @@ const TextCustomizer: React.FC<TextCustomizerProps> = ({
               }
             />
 
-            {/* Background Blur Control - Exact Match to SliderField */}
+            {/* Background Blur Control */}
             <div className="flex items-center justify-between mt-6">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="blur-amount">Background Blur</Label>
-              </div>
-              <Input
-                type="text"
-                value={`f/${getApertureFromSlider(backgroundBlur)}`}
-                readOnly
-                className="w-16 rounded-md border border-transparent px-2 py-0.5 text-center text-sm text-muted-foreground hover:border-border hover:text-foreground cursor-default"
-              />
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-white/40">Background Blur</span>
+              <span className="text-xs text-white/30 font-mono tabular-nums">f/{getApertureFromSlider(backgroundBlur)}</span>
             </div>
             <Slider
               id="blur-amount"
@@ -314,7 +295,7 @@ const TextCustomizer: React.FC<TextCustomizerProps> = ({
               value={[backgroundBlur]}
               step={1}
               onValueChange={(value) => setBackgroundBlur(value[0])}
-              className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4 mt-2"
+              className="[&_[role=slider]]:h-5 [&_[role=slider]]:w-5 mt-3"
               aria-label="Background Blur"
             />
             <div className="grid grid-cols-2 gap-4">

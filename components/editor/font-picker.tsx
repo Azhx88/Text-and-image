@@ -97,8 +97,8 @@ const FontFamilyPicker: React.FC<FontFamilyPickerProps> = ({
                     onSelect={() => handleFontSelect(font.name)}
                     className={cn(
                       'hover:cursor-pointer transition-all duration-200',
-                      'hover:bg-gradient-to-r hover:from-blue-600/30 hover:to-purple-600/30 hover:translate-x-1',
-                      font.name === currentFont && 'bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold shadow-lg shadow-blue-500/30'
+                      'hover:bg-violet-500/10 hover:translate-x-0.5',
+                      font.name === currentFont && 'bg-violet-500/15 text-violet-200 font-semibold border border-violet-500/25'
                     )}
                   >
                     <div className="flex items-center justify-between w-full gap-3">
@@ -135,8 +135,8 @@ const FontFamilyPicker: React.FC<FontFamilyPickerProps> = ({
                   className={cn(
                     'hover:cursor-pointer transition-all duration-200',
                     !isPaidUser && 'opacity-50 hover:cursor-not-allowed',
-                    isPaidUser && 'hover:bg-gradient-to-r hover:from-blue-600/30 hover:to-purple-600/30 hover:translate-x-1',
-                    font.name === currentFont && 'bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold shadow-lg shadow-blue-500/30'
+                    isPaidUser && 'hover:bg-violet-500/10 hover:translate-x-0.5',
+                    font.name === currentFont && 'bg-violet-500/15 text-violet-200 font-semibold border border-violet-500/25'
                   )}
                 >
                   <div className="flex items-center justify-between w-full gap-3">

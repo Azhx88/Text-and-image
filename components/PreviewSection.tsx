@@ -72,6 +72,7 @@ export const PreviewSection = () => {
     const [error, setError] = useState<string | null>(null);
     const [subjectImageUrl, setSubjectImageUrl] = useState<string | null>(null);
     const [processingProgress, setProcessingProgress] = useState<number>(0);
+    const [progressFading, setProgressFading] = useState<boolean>(false);
     const [imageBounds, setImageBounds] = useState<{ width: number; height: number; left: number; top: number } | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -113,6 +114,18 @@ export const PreviewSection = () => {
         img.src = selectedImage;
     }, [selectedImage]);
 
+    // Trickle progress forward while loading so the bar never looks stuck
+    useEffect(() => {
+        if (!isLoading) { setProgressFading(false); return; }
+        const id = setInterval(() => {
+            setProcessingProgress(prev => {
+                if (prev >= 88) return prev;
+                return Math.min(88, prev + Math.random() * 1.2 + 0.3);
+            });
+        }, 500);
+        return () => clearInterval(id);
+    }, [isLoading]);
+
     const handleUploadImage = () => {
         if (fileInputRef.current) {
             fileInputRef.current.click();
@@ -125,6 +138,7 @@ export const PreviewSection = () => {
             setError(null);
             setIsLoading(true);
             setSubjectImageUrl(null);
+            setProgressFading(false);
             setProcessingProgress(0);
             const imageUrl = URL.createObjectURL(file);
             setSelectedImage(imageUrl);
@@ -196,18 +210,18 @@ export const PreviewSection = () => {
             }
 
             // Optimize image if needed
-            setProcessingProgress(10);
+            setProcessingProgress(prev => Math.max(prev, 10));
             const optimizedBlob = await optimizeImage(file);
             const optimizedUrl = URL.createObjectURL(optimizedBlob);
 
-            setProcessingProgress(20);
+            setProcessingProgress(prev => Math.max(prev, 20));
 
             // Configure background removal for better performance
             const config: Config = {
                 progress: (key, current, total) => {
-                    // Update progress bar (20% to 90%)
+                    // Ratchet: only ever move forward (20% to 90%)
                     const percentage = 20 + Math.round((current / total) * 70);
-                    setProcessingProgress(percentage);
+                    setProcessingProgress(prev => Math.max(prev, percentage));
                 },
                 model: 'isnet_fp16', // Use fp16 model for better speed while maintaining quality
                 output: {
@@ -217,7 +231,7 @@ export const PreviewSection = () => {
             };
 
             const imageBlob = await removeBackground(optimizedUrl, config);
-            setProcessingProgress(95);
+            setProcessingProgress(prev => Math.max(prev, 95));
 
             const url = URL.createObjectURL(imageBlob);
             setSubjectImageUrl(url);
@@ -225,7 +239,9 @@ export const PreviewSection = () => {
             // Cache the result
             imageCache.current.set(cacheKey, url);
 
-            setProcessingProgress(100);
+            setProcessingProgress(prev => Math.max(prev, 100));
+            // Fade out bar after 300ms, then fully reset after 800ms
+            setTimeout(() => setProgressFading(true), 300);
 
             // Clean up optimized URL
             URL.revokeObjectURL(optimizedUrl);
@@ -392,76 +408,100 @@ export const PreviewSection = () => {
     };
 
     return (
-        <div className='h-full flex flex-col bg-slate-50 dark:bg-slate-950'>
-            <header className='sticky top-0 z-50 w-full border-b border-slate-200/50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-950/60'>
-                <div className='container flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8'>
-                    <div className="flex items-center space-x-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden">
-                            <img src="/img/vishal_b_0702241200.jpg" alt="Logo" className="w-full h-full object-cover" />
+        <div className='h-full flex flex-col overflow-hidden'>
+
+            {/* ── Hidden file input (always mounted) ── */}
+            <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleFileChange}
+                accept=".jpg, .jpeg, .png"
+            />
+
+            {selectedImage ? (
+                /* ═══════════════════════════════════════
+                   EDITOR VIEW — header + canvas workspace
+                   ═══════════════════════════════════════ */
+                <>
+                    {/* Slim header */}
+                    <header className='flex-shrink-0 flex items-center justify-between px-4 sm:px-5 h-12 border-b border-white/[0.06]'
+                        style={{ background: 'rgba(10,10,15,0.8)', backdropFilter: 'blur(20px)' }}>
+                        <div className="flex items-center gap-2">
+                            <img src="/img/logo.png" alt="Logo" className="h-6 w-6 rounded-md object-cover" />
+                            <span className="text-sm font-semibold tracking-tight text-gradient-violet select-none">TextFX</span>
                         </div>
-                        <h2 className="text-2xl font-bold bg-gradient-to-r from-yellow-600 via-amber-600 to-yellow-800 bg-clip-text text-transparent">
-                            TextFX
-                        </h2>
-                    </div>
-                    <div className='flex items-center gap-3'>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            className="hidden"
-                            onChange={handleFileChange}
-                            accept=".jpg, .jpeg, .png"
-                        />
-                        {selectedImage && (
-                            <Button
-                                onClick={saveCompositeImage}
-                                variant="outline"
-                                className='hidden md:flex items-center gap-2 border-slate-300 dark:border-slate-700 hover:border-yellow-500 dark:hover:border-yellow-400 transition-all duration-200'
-                            >
-                                <DownloadIcon className="h-4 w-4" />
+                        <div className="flex items-center gap-2">
+                            {/* Change image */}
+                            <button onClick={handleUploadImage}
+                                className="h-8 w-8 flex items-center justify-center rounded-lg border border-white/10 text-white/40 hover:text-white/80 hover:border-white/20 transition-all"
+                                title="Change image">
+                                <UploadIcon className="h-3.5 w-3.5" />
+                            </button>
+                            {/* Export */}
+                            <button onClick={saveCompositeImage}
+                                className="btn-violet h-8 px-4 text-xs min-h-[44px] flex items-center gap-1.5">
+                                <DownloadIcon className="h-3.5 w-3.5" />
                                 Export
-                            </Button>
-                        )}
-                        <Button
-                            onClick={handleUploadImage}
-                            className="bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-700 hover:to-amber-700 text-white shadow-lg shadow-yellow-500/25 hover:shadow-yellow-600/25 transition-all duration-200 flex items-center gap-2"
-                        >
-                            <UploadIcon className="h-4 w-4" />
-                            Upload Image
-                        </Button>
-                    </div>
-                </div>
-            </header>
-            <main className='flex-1 container py-8 px-4 sm:px-6 lg:px-8'>
-                {selectedImage ? (
-                    <div className='h-full'>
-                        <canvas ref={canvasRef} className="hidden" />
-                        <div
-                            ref={previewContainerRef}
-                            className="aspect-video w-full rounded-2xl border-2 border-slate-200/50 bg-slate-100 dark:bg-slate-900/50 dark:border-slate-700/50 p-6 relative overflow-hidden flex items-center justify-center shadow-2xl backdrop-blur-sm"
-                            style={{ touchAction: 'none', backgroundImage: `url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' stroke='%23e2e8f0' stroke-width='4' stroke-dasharray='6%2c 14' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e")` }}
-                        >
-                            {isLoading ? (
-                                <div className='flex flex-col items-center gap-4 p-8 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-lg min-w-[320px]'>
-                                    <div className="w-16 h-16 border-4 border-blue-600 border-dashed rounded-full animate-spin"></div>
-                                    <span className="text-slate-700 dark:text-slate-300 font-medium text-lg">Processing image...</span>
-                                    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mt-2">
-                                        <div
-                                            className="bg-gradient-to-r from-blue-600 to-purple-600 h-2.5 rounded-full transition-all duration-300 ease-out"
-                                            style={{ width: `${processingProgress}%` }}
-                                        ></div>
+                            </button>
+                        </div>
+                    </header>
+
+                    {/* Canvas workspace */}
+                    <main className='flex-1 overflow-auto p-3 sm:p-5 flex items-start justify-center'>
+                        <div className='w-full'>
+                            <canvas ref={canvasRef} className="hidden" />
+                            <div
+                                ref={previewContainerRef}
+                                className="aspect-video w-full max-w-full rounded-xl sm:rounded-2xl relative overflow-hidden flex items-center justify-center"
+                                style={{
+                                    touchAction: 'none',
+                                    background: '#050507',
+                                    boxShadow: '0 0 0 1px rgba(255,255,255,0.07), 0 20px 60px rgba(0,0,0,0.7), 0 0 80px rgba(167,139,250,0.04)'
+                                }}
+                            >
+                                {isLoading ? (
+                                    /* Violet spinner + progress */
+                                    <div className='flex flex-col items-center gap-5 p-6 rounded-2xl w-full max-w-[280px]'
+                                        style={{ background: 'rgba(10,10,15,0.92)', backdropFilter: 'blur(24px)' }}>
+                                        <div className="relative w-12 h-12">
+                                            <div className="absolute inset-0 rounded-full border border-white/5" />
+                                            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-violet-400 animate-spin" style={{ animationDuration: '0.9s' }} />
+                                            <div className="absolute inset-[5px] rounded-full border border-violet-500/20" />
+                                        </div>
+                                        <div className="text-center space-y-1">
+                                            <p className="text-sm font-semibold text-white/90">Removing background</p>
+                                            <p className="text-xs text-white/35">AI is processing your image…</p>
+                                        </div>
+                                        <div className="w-full space-y-1.5">
+                                            <div className="w-full bg-white/[0.06] rounded-full h-1 overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full ${progressFading ? 'opacity-0' : 'opacity-100'}`}
+                                                    style={{
+                                                        width: `${processingProgress}%`,
+                                                        background: 'linear-gradient(90deg, #a78bfa, #38bdf8)',
+                                                        transition: 'width 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.5s ease',
+                                                        boxShadow: '0 0 8px rgba(167,139,250,0.6)'
+                                                    }}
+                                                />
+                                            </div>
+                                            <p className="text-right text-[10px] text-white/25 tabular-nums">{Math.round(processingProgress)}%</p>
+                                        </div>
                                     </div>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">{processingProgress}% complete</p>
-                                </div>
-                            ) : error ? (
-                                <div className="flex flex-col items-center gap-4 text-center text-red-500 bg-red-500/10 p-8 rounded-2xl border border-red-500/20">
-                                    <ExclamationTriangleIcon className="w-12 h-12 text-red-500" />
-                                    <h3 className="text-xl font-semibold">Oops! Something went wrong.</h3>
-                                    <p className="text-sm">{error}</p>
-                                    <Button onClick={handleUploadImage} variant="outline" className="mt-4">Try another image</Button>
-                                </div>
-                            ) : (
-                                <>
-                                    {/* Wrapper with overflow hidden to clip text at exact image boundaries */}
+                                ) : error ? (
+                                    <div className="flex flex-col items-center gap-3 text-center p-6 rounded-2xl mx-4"
+                                        style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.18)' }}>
+                                        <ExclamationTriangleIcon className="w-9 h-9 text-red-400" />
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-red-400">Processing failed</h3>
+                                            <p className="text-xs text-red-400/60 mt-0.5">{error}</p>
+                                        </div>
+                                        <button onClick={handleUploadImage}
+                                            className="px-4 py-2 rounded-xl text-xs font-medium border border-red-500/25 text-red-400 hover:bg-red-500/10 transition-colors">
+                                            Try another image
+                                        </button>
+                                    </div>
+                                ) : (
                                     <div
                                         className="absolute overflow-hidden"
                                         style={imageBounds ? {
@@ -471,21 +511,15 @@ export const PreviewSection = () => {
                                             top: `${imageBounds.top}px`
                                         } : { inset: 0 }}
                                     >
-                                        {[...layers].filter(layer => layer.visible).sort((a, b) => a.order - b.order).map(layer => {
+                                        {[...layers].filter(l => l.visible).sort((a, b) => a.order - b.order).map(layer => {
                                             switch (layer.type) {
                                                 case 'full':
                                                     return (
-                                                        <Image
-                                                            key={layer.id}
-                                                            src={selectedImage}
-                                                            alt="Full Image"
-                                                            layout="fill"
-                                                            objectFit="contain"
-                                                            objectPosition="center"
+                                                        <Image key={layer.id} src={selectedImage} alt="Full Image"
+                                                            layout="fill" objectFit="contain" objectPosition="center"
                                                             className="absolute inset-0 object-contain pointer-events-none"
                                                             draggable={false}
                                                             style={{
-                                                                // Blur + color filter for background
                                                                 filter: [
                                                                     backgroundBlur > 0 ? `blur(${(backgroundBlur / 100) * 15}px)` : '',
                                                                     getFilterCSSStringWithIntensity(selectedFilter, filterIntensity)
@@ -496,27 +530,17 @@ export const PreviewSection = () => {
                                                     );
                                                 case 'subject':
                                                     return subjectImageUrl && (
-                                                        <Image
-                                                            key={layer.id}
-                                                            src={subjectImageUrl}
-                                                            alt="Subject Only"
-                                                            layout="fill"
-                                                            objectFit="contain"
-                                                            objectPosition="center"
+                                                        <Image key={layer.id} src={subjectImageUrl} alt="Subject Only"
+                                                            layout="fill" objectFit="contain" objectPosition="center"
                                                             className="absolute inset-0 object-contain pointer-events-none"
                                                             draggable={false}
-                                                            style={{
-                                                                // Color filter for subject (no blur)
-                                                                filter: getFilterCSSStringWithIntensity(selectedFilter, filterIntensity)
-                                                            }}
+                                                            style={{ filter: getFilterCSSStringWithIntensity(selectedFilter, filterIntensity) }}
                                                         />
                                                     );
                                                 case 'text':
                                                     const textSet = layer as TextLayer;
                                                     return (
-                                                        <TextLayerComponent
-                                                            key={textSet.id}
-                                                            textSet={textSet}
+                                                        <TextLayerComponent key={textSet.id} textSet={textSet}
                                                             handleAttributeChange={handleAttributeChange}
                                                             previewContainerRef={previewContainerRef}
                                                             applyFilterToText={applyFilterToText}
@@ -524,48 +548,88 @@ export const PreviewSection = () => {
                                                             filterIntensity={filterIntensity}
                                                         />
                                                     );
-                                                default:
-                                                    return null;
+                                                default: return null;
                                             }
                                         })}
                                     </div>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                ) : (
-                    <div className='flex flex-col items-center justify-center h-full space-y-8 text-center'>
-                        <div className="inline-flex items-center justify-center p-4 rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 mb-4">
-                            <div className="flex h-16 w-16 items-center justify-center rounded-xl overflow-hidden">
-                                <img src="/img/vishal_b_0702241200.jpg" alt="Logo" className="w-full h-full object-cover" />
+                                )}
                             </div>
                         </div>
-                        <h1 className="text-5xl lg:text-6xl font-bold bg-gradient-to-r from-yellow-600 via-amber-600 to-yellow-800 bg-clip-text text-transparent leading-tight">
-                            Bring Your Images to Life
-                        </h1>
-                        <p className="text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl">
-                            Add stunning text behind any object in your photos. Our AI will automatically handle the background removal, so you can focus on creating.
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <Button
-                                onClick={handleUploadImage}
-                                size="lg"
-                                className="bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-700 hover:to-amber-700 text-white shadow-2xl shadow-yellow-500/25 hover:shadow-yellow-600/25 transition-all duration-200 text-lg px-8 py-6 h-auto"
-                            >
-                                <UploadIcon className="h-5 w-5 mr-3" />
-                                Upload Your Image
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="lg"
-                                className="border-2 border-slate-300 dark:border-slate-700 hover:border-yellow-500 dark:hover:border-yellow-400 text-slate-700 dark:text-slate-300 hover:text-yellow-600 dark:hover:text-yellow-400 transition-all duration-200 text-lg px-8 py-6 h-auto"
-                            >
-                                See Examples
-                            </Button>
+                    </main>
+                </>
+            ) : (
+                /* ═══════════════════════════════════════════════
+                   LANDING VIEW — full-page upload + examples
+                   ═══════════════════════════════════════════════ */
+                <div className='flex-1 flex flex-col items-center justify-start overflow-auto px-5 pt-10 pb-16'>
+
+                    {/* Logo */}
+                    <div className="mb-6">
+                        <div className="w-14 h-14 rounded-2xl overflow-hidden ring-1 ring-white/10"
+                            style={{ boxShadow: '0 12px 40px rgba(167,139,250,0.15)' }}>
+                            <img src="/img/logo.png" alt="TextFX" className="w-full h-full object-cover" />
                         </div>
                     </div>
-                )}
-            </main>
+
+                    {/* Headline */}
+                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-center mb-3 leading-[1.1]">
+                        <span className="text-white">Text </span>
+                        <span className="text-gradient-violet">Behind</span>
+                        <span className="text-white"> Image</span>
+                    </h1>
+                    <p className="text-sm sm:text-base text-white/40 text-center max-w-sm mb-10 leading-relaxed">
+                        Upload a photo — AI removes the background so your text appears <em className="not-italic text-violet-300">behind</em> the subject.
+                    </p>
+
+                    {/* Upload drop-zone */}
+                    <button
+                        onClick={handleUploadImage}
+                        className="group w-full max-w-md mb-10 flex flex-col items-center gap-4 p-8 sm:p-10 rounded-2xl border-2 border-dashed border-white/15 hover:border-violet-500/60 transition-all duration-200 min-h-[180px] sm:min-h-[200px]"
+                        style={{
+                            background: 'rgba(255,255,255,0.02)',
+                            boxShadow: '0 0 0 0 transparent'
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 0 40px rgba(167,139,250,0.08)')}
+                        onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 0 0 0 transparent')}
+                    >
+                        <div className="w-12 h-12 rounded-xl border border-violet-500/25 bg-violet-500/10 group-hover:bg-violet-500/18 flex items-center justify-center transition-colors">
+                            <UploadIcon className="h-5 w-5 text-violet-400" />
+                        </div>
+                        <div className="text-center space-y-1">
+                            <p className="text-sm font-semibold text-white/80 group-hover:text-white transition-colors">
+                                Drop your image here
+                            </p>
+                            <p className="text-xs text-white/30">or click to browse &middot; JPG or PNG</p>
+                        </div>
+                    </button>
+
+                    {/* Before / After examples */}
+                    <div className="w-full max-w-2xl">
+                        <p className="text-xs uppercase tracking-widest text-white/30 text-center mb-5">Examples</p>
+                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                            {[
+                                { before: '/img/example-before-1.jpg', after: '/img/example-after-1.png' },
+                                { before: '/img/example-before-2.jpg', after: '/img/example-after-2.png' },
+                            ].map((ex, i) => (
+                                <div key={i} className="flex flex-col gap-2">
+                                    <div className="relative rounded-xl overflow-hidden aspect-video bg-black/30"
+                                        style={{ boxShadow: '0 0 0 1px rgba(255,255,255,0.06)' }}>
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={ex.before} alt={`Before ${i + 1}`} className="w-full h-full object-cover opacity-60" />
+                                        <span className="absolute top-2 left-2 text-[9px] uppercase tracking-widest text-white/40 px-1.5 py-0.5 rounded bg-black/40">Before</span>
+                                    </div>
+                                    <div className="relative rounded-xl overflow-hidden aspect-video bg-black/30"
+                                        style={{ boxShadow: '0 0 0 1px rgba(167,139,250,0.2)' }}>
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={ex.after} alt={`After ${i + 1}`} className="w-full h-full object-cover" />
+                                        <span className="absolute top-2 left-2 text-[9px] uppercase tracking-widest text-violet-300/70 px-1.5 py-0.5 rounded bg-violet-900/40">After</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

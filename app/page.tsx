@@ -1,34 +1,41 @@
-// app/page.tsx
 'use client'
 
-import React, { useState } from 'react';
+import React from 'react';
 import { LayerManagerColumn } from '@/components/LayerManagerColumn';
 import { PreviewSection } from '@/components/PreviewSection';
-import { LayerManagerProvider } from '@/context/useLayerManager';
-import { Button } from '@/components/ui/button';
-import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 
 export default function Page() {
-  const [isPanelOpen, setIsPanelOpen] = useState(true);
-
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950">
-      <div
-        className={`transition-all duration-300 ease-in-out border-r border-slate-200 dark:border-slate-800 ${isPanelOpen ? 'w-[320px]' : 'w-0'
-          }`}
-      >
-        {isPanelOpen && <LayerManagerColumn />}
-      </div>
-      <div className="relative flex-1">
-        <Button
-          onClick={() => setIsPanelOpen(!isPanelOpen)}
-          className="absolute top-1/2 -translate-y-1/2 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-full h-8 w-8 p-0 z-10"
-          style={{ left: isPanelOpen ? '-16px' : '8px' }}
-        >
-          {isPanelOpen ? <ChevronLeftIcon className="h-4 w-4" /> : <ChevronRightIcon className="h-4 w-4" />}
-        </Button>
+    /*
+      Layout logic (single LayerManagerColumn mount — no double-render):
+
+      Desktop (md+):
+        flex-row  →  sidebar left (280/320px) | canvas right (flex-1)
+
+      Mobile (<md):
+        sidebar  →  fixed bottom-0, height 48vh, z-40
+        canvas   →  full-width, pb-[48vh] so it's never hidden behind the panel
+    */
+    <div className="flex h-screen overflow-hidden bg-[#0a0a0f]">
+
+      {/* ── Canvas / main area ── */}
+      <div className="
+        flex-1 min-w-0 overflow-hidden
+        pb-[48vh] md:pb-0
+      ">
         <PreviewSection />
       </div>
+
+      {/* ── Sidebar: fixed bottom on mobile, left sidebar on desktop ── */}
+      <aside className="
+        bg-[#0d0e14] border-white/[0.06]
+        fixed bottom-0 inset-x-0 h-[48vh] z-40 border-t overflow-y-auto
+        md:static md:order-first md:w-[280px] lg:w-[320px] md:h-full md:flex-shrink-0
+        md:border-t-0 md:border-r md:z-auto
+      ">
+        <LayerManagerColumn />
+      </aside>
+
     </div>
   );
 }
