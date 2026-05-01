@@ -14,7 +14,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "TextFX",
   description: "Text and image layer editor",
-  icons: { icon: '/img/logo.png' },
+  icons: { icon: '/img/logo.webp' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

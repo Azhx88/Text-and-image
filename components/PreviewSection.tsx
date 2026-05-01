@@ -428,7 +428,7 @@ export const PreviewSection = () => {
                     <header className='flex-shrink-0 flex items-center justify-between px-4 sm:px-5 h-12 border-b border-white/[0.06]'
                         style={{ background: 'rgba(10,10,15,0.8)', backdropFilter: 'blur(20px)' }}>
                         <div className="flex items-center gap-2">
-                            <img src="/img/logo.png" alt="Logo" className="h-6 w-6 rounded-md object-cover" />
+                            <img src="/img/logo.webp" alt="Logo" className="h-6 w-6 rounded-md object-cover" />
                             <span className="text-sm font-semibold tracking-tight text-gradient-violet select-none">TextFX</span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -567,7 +567,7 @@ export const PreviewSection = () => {
                     <div className="mb-6">
                         <div className="w-14 h-14 rounded-2xl overflow-hidden ring-1 ring-white/10"
                             style={{ boxShadow: '0 12px 40px rgba(167,139,250,0.15)' }}>
-                            <img src="/img/logo.png" alt="TextFX" className="w-full h-full object-cover" />
+                            <img src="/img/logo.webp" alt="TextFX" className="w-full h-full object-cover" />
                         </div>
                     </div>
 
